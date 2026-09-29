@@ -1,1675 +1,692 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Aura Glow Store - Admin Panel</title>
-
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: #f7f7f7;
-            color: #222;
-        }
-
-        button {
-            cursor: pointer;
-            border: none;
-        }
-
-        /* =========================
-           LOGIN
-        ========================= */
-
-        #loginPage {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .login-box {
-            width: 100%;
-            max-width: 400px;
-            background: white;
-            padding: 30px;
-            border-radius: 18px;
-            box-shadow: 0 10px 35px rgba(0,0,0,0.08);
-        }
-
-        .login-box h1 {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .login-box p {
-            text-align: center;
-            color: #777;
-            margin-bottom: 25px;
-        }
-
-        .input-group {
-            margin-bottom: 16px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 7px;
-            font-weight: bold;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 13px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            outline: none;
-            font-size: 15px;
-        }
-
-        .input-group input:focus {
-            border-color: #111;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            border-radius: 10px;
-            background: #111;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        #loginError {
-            color: #d00;
-            text-align: center;
-            margin-top: 15px;
-            line-height: 1.5;
-        }
-
-        /* =========================
-           ADMIN
-        ========================= */
-
-        #adminPage {
-            display: none;
-        }
-
-        .topbar {
-            background: white;
-            padding: 16px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .topbar h1 {
-            font-size: 22px;
-        }
-
-        .logout-btn {
-            background: #eee;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: auto;
-            padding: 25px;
-        }
-
-        /* =========================
-           STATS
-        ========================= */
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
-        }
-
-        .stat-card h3 {
-            color: #777;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .stat-card strong {
-            font-size: 28px;
-        }
-
-        /* =========================
-           ORDERS
-        ========================= */
-
-        .orders-box {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            overflow: hidden;
-        }
-
-        .orders-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .orders-header input,
-        .orders-header select {
-            padding: 11px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .orders-header input {
-            width: 250px;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 850px;
-        }
-
-        th,
-        td {
-            padding: 13px;
-            border-bottom: 1px solid #eee;
-            text-align: left;
-            vertical-align: middle;
-        }
-
-        th {
-            background: #fafafa;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 6px 9px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .pending {
-            background: #fff3cd;
-        }
-
-        .confirmed {
-            background: #d1ecf1;
-        }
-
-        .processing {
-            background: #e2d9f3;
-        }
-
-        .shipped {
-            background: #cfe2ff;
-        }
-
-        .delivered {
-            background: #d1e7dd;
-        }
-
-        .cancelled {
-            background: #f8d7da;
-        }
-
-        .actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .actions button {
-            padding: 7px 9px;
-            border-radius: 7px;
-            font-size: 12px;
-        }
-
-        .view-btn {
-            background: #eee;
-        }
-
-        .delete-btn {
-            background: #ffe0e0;
-            color: #b00000;
-        }
-
-        .status-select {
-            padding: 7px;
-            border: 1px solid #ddd;
-            border-radius: 7px;
-            background: white;
-        }
-
-        .empty {
-            text-align: center;
-            padding: 40px;
-            color: #777;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #777;
-        }
-
-        /* =========================
-           MODAL
-        ========================= */
-
-        .modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 100;
-        }
-
-        .modal-box {
-            background: white;
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 25px;
-            border-radius: 15px;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .close-btn {
-            background: #eee;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-        }
-
-        .detail {
-            margin-bottom: 14px;
-        }
-
-        .detail strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .product-item {
-            padding: 10px;
-            background: #f7f7f7;
-            border-radius: 8px;
-            margin-bottom: 7px;
-        }
-
-        /* =========================
-           MOBILE
-        ========================= */
-
-        @media (max-width: 900px) {
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 600px) {
-
-            .topbar {
-                padding: 14px;
-            }
-
-            .topbar h1 {
-                font-size: 18px;
-            }
-
-            .container {
-                padding: 15px;
-            }
-
-            .stats {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 15px;
-            }
-
-            .stat-card strong {
-                font-size: 22px;
-            }
-
-            .orders-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .orders-header input {
-                width: 100%;
-            }
-
-            .orders-box {
-                padding: 12px;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aura Glow Store | Admin Panel</title>
+
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --primary:#D98C8C;--primary-dark:#c26f6f;--secondary:#F8E9E7;--bg:#FFF9F8;
+  --dark:#2F2F2F;--white:#FFFFFF;--radius:14px;--shadow:0 4px 18px rgba(47,47,47,0.08);
+  --transition:0.2s ease;--green:#258a4a;--red:#c0392b;--orange:#c78a1f;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--dark);line-height:1.5;}
+img{max-width:100%;display:block;}
+button,input,select,textarea{font-family:inherit;}
+button{cursor:pointer;border:none;outline:none;}
+
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,var(--secondary),var(--bg));}
+.login-box{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:32px 26px;max-width:380px;width:100%;}
+.login-box h1{color:var(--primary-dark);font-size:1.4rem;margin-bottom:4px;text-align:center;}
+.login-box p{color:#888;font-size:0.85rem;text-align:center;margin-bottom:22px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-weight:700;font-size:0.82rem;margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--secondary);border-radius:8px;font-size:0.9rem;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--primary);outline:none;}
+.btn{padding:11px 20px;border-radius:9px;font-weight:700;font-size:0.9rem;transition:background var(--transition),transform 0.15s ease;}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--primary);color:#fff;width:100%;}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-primary:disabled{background:#ccc;cursor:not-allowed;}
+.btn-outline{background:#fff;border:1.5px solid var(--secondary);color:var(--dark);}
+.login-error{color:var(--red);font-size:0.82rem;margin-top:10px;display:none;text-align:center;}
+
+/* APP SHELL */
+#appShell{display:none;min-height:100vh;flex-direction:column;}
+.topbar{position:sticky;top:0;z-index:100;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;padding:12px 16px;}
+.topbar h1{font-size:1.1rem;color:var(--primary-dark);}
+.topbar .sub{font-size:0.68rem;color:#999;}
+.logout-btn{background:var(--secondary);color:var(--primary-dark);padding:8px 14px;border-radius:8px;font-weight:700;font-size:0.82rem;}
+
+.tabs{display:flex;gap:8px;padding:12px 16px 0;overflow-x:auto;}
+.tab-btn{flex:0 0 auto;background:#fff;border:1.5px solid var(--secondary);padding:9px 16px;border-radius:20px;font-weight:700;font-size:0.82rem;color:#777;white-space:nowrap;}
+.tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+main{padding:16px;flex:1;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:22px;}
+.stat-card{background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:14px;text-align:center;}
+.stat-card .num{font-size:1.4rem;font-weight:800;color:var(--primary-dark);}
+.stat-card .label{font-size:0.72rem;color:#888;margin-top:2px;}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.section-header h2{font-size:1.1rem;color:var(--primary-dark);}
+
+/* PRODUCT GRID (admin) */
+.admin-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+.admin-product-card{background:#fff;border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+.admin-product-card .img-wrap{width:100%;aspect-ratio:1/1;background:var(--secondary);}
+.admin-product-card img{width:100%;height:100%;object-fit:contain;}
+.admin-product-card .body{padding:12px;}
+.admin-product-card .name{font-weight:700;font-size:0.92rem;margin-bottom:4px;}
+.admin-product-card .meta{font-size:0.76rem;color:#888;margin-bottom:6px;}
+.admin-product-card .price-line{font-size:0.9rem;font-weight:800;color:var(--primary-dark);margin-bottom:6px;}
+.admin-product-card .price-line .orig{font-size:0.76rem;color:#aaa;text-decoration:line-through;margin-left:6px;font-weight:600;}
+.badge{display:inline-block;font-size:0.68rem;font-weight:700;padding:2px 9px;border-radius:10px;}
+.badge.in{background:#e8f7ee;color:var(--green);}
+.badge.out{background:#fbe9e9;color:var(--red);}
+.card-actions{display:flex;gap:8px;margin-top:10px;}
+.card-actions button{flex:1;padding:8px;border-radius:7px;font-weight:700;font-size:0.78rem;}
+.edit-btn{background:var(--secondary);color:var(--primary-dark);}
+.delete-btn{background:#fbe9e9;color:var(--red);}
+
+/* ORDERS */
+.order-search{width:100%;max-width:340px;padding:10px 12px;border:1.5px solid var(--secondary);border-radius:8px;font-size:0.88rem;margin-bottom:14px;}
+.order-card{background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:14px;margin-bottom:12px;}
+.order-card .order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.order-card .order-id{font-weight:800;color:var(--primary-dark);font-size:0.9rem;}
+.order-card .order-date{font-size:0.72rem;color:#999;}
+.order-card .order-customer{font-size:0.86rem;margin-bottom:4px;}
+.order-card .order-total{font-weight:800;font-size:0.95rem;color:var(--primary-dark);}
+.status-select{padding:7px 10px;border-radius:8px;border:1.5px solid var(--secondary);font-size:0.78rem;font-weight:700;}
+.status-pill{font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:10px;}
+.status-Pending{background:#fdf3e0;color:var(--orange);}
+.status-Confirmed{background:#e3f0fb;color:#2f6fa8;}
+.status-Processing{background:#f0e8fb;color:#7a4fc2;}
+.status-Shipped{background:#e0f3fd;color:#1b7fb0;}
+.status-Delivered{background:#e8f7ee;color:var(--green);}
+.status-Cancelled{background:#fbe9e9;color:var(--red);}
+.order-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.order-actions button{padding:7px 12px;border-radius:7px;font-weight:700;font-size:0.76rem;}
+.view-btn{background:var(--secondary);color:var(--primary-dark);}
+.order-details{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--secondary);font-size:0.82rem;}
+.order-details.open{display:block;}
+.order-line{display:flex;justify-content:space-between;padding:3px 0;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.show{display:flex;}
+.modal-card{background:#fff;border-radius:var(--radius);max-width:480px;width:100%;max-height:92vh;overflow-y:auto;padding:22px;position:relative;}
+.modal-card h3{color:var(--primary-dark);margin-bottom:16px;font-size:1.1rem;}
+.modal-close{position:absolute;top:12px;right:12px;background:var(--secondary);width:28px;height:28px;border-radius:50%;}
+.img-preview-row{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.img-preview{width:52px;height:52px;object-fit:cover;border-radius:8px;background:var(--secondary);border:1px solid var(--secondary);}
+.form-actions{display:flex;gap:10px;margin-top:16px;}
+.form-actions button{flex:1;}
+.stock-toggle{display:flex;align-items:center;gap:10px;}
+.confirm-text{font-size:0.9rem;margin-bottom:18px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--dark);color:#fff;padding:12px 20px;border-radius:10px;font-size:0.85rem;opacity:0;visibility:hidden;transition:opacity 0.25s ease,transform 0.25s ease;z-index:3000;max-width:90%;text-align:center;}
+#toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+#toast.error{background:var(--red);}
+#toast.success{background:var(--green);}
+
+.empty-msg{text-align:center;color:#999;padding:30px 0;}
+.loading-msg{text-align:center;color:#999;padding:30px 0;}
+
+@media (max-width:480px){
+  main{padding:12px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
 </head>
-
 <body>
 
-<!-- =========================================
-     ADMIN LOGIN
-========================================= -->
-
-<div id="loginPage">
-
-    <div class="login-box">
-
-        <h1>🔐 Admin Login</h1>
-
-        <p>Aura Glow Store</p>
-
-        <div class="input-group">
-
-            <label for="email">Email</label>
-
-            <input
-                type="email"
-                id="email"
-                placeholder="Admin email"
-                autocomplete="email"
-            >
-
-        </div>
-
-        <div class="input-group">
-
-            <label for="password">Password</label>
-
-            <input
-                type="password"
-                id="password"
-                placeholder="Password"
-                autocomplete="current-password"
-            >
-
-        </div>
-
-        <button
-            class="login-btn"
-            id="loginButton"
-            onclick="loginAdmin()"
-        >
-            Login
-        </button>
-
-        <div id="loginError"></div>
-
-    </div>
-
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h1>Aura Glow Store</h1>
+    <p>Admin Panel Login</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="loginBtn">Log In</button>
+      <p class="login-error" id="loginError"></p>
+    </form>
+  </div>
 </div>
 
+<!-- APP SHELL -->
+<div id="appShell">
 
-<!-- =========================================
-     ADMIN DASHBOARD
-========================================= -->
-
-<div id="adminPage">
-
-    <div class="topbar">
-
-        <h1>📊 Aura Glow Admin</h1>
-
-        <button
-            class="logout-btn"
-            onclick="logoutAdmin()"
-        >
-            Logout
-        </button>
-
+  <div class="topbar">
+    <div>
+      <h1>Aura Glow Store</h1>
+      <div class="sub">Admin Panel</div>
     </div>
+    <button class="logout-btn" id="logoutBtn">Log Out</button>
+  </div>
 
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="products">Products</button>
+    <button class="tab-btn" data-tab="orders">Orders</button>
+  </div>
 
-    <div class="container">
+  <main>
 
-        <!-- STATS -->
+    <!-- DASHBOARD -->
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="stats-grid" id="statsGrid">
+        <p class="loading-msg">Loading stats…</p>
+      </div>
+    </section>
 
-        <div class="stats">
+    <!-- PRODUCTS -->
+    <section class="tab-panel" id="tab-products">
+      <div class="section-header">
+        <h2>Product Management</h2>
+        <button class="btn btn-primary" id="addProductBtn" style="width:auto;">+ Add Product</button>
+      </div>
+      <div class="admin-product-grid" id="adminProductGrid">
+        <p class="loading-msg">Loading products…</p>
+      </div>
+    </section>
 
-            <div class="stat-card">
-                <h3>Total Orders</h3>
-                <strong id="totalOrders">0</strong>
-            </div>
+    <!-- ORDERS -->
+    <section class="tab-panel" id="tab-orders">
+      <div class="section-header">
+        <h2>Orders</h2>
+      </div>
+      <input type="text" class="order-search" id="orderSearch" placeholder="Search by name or phone…">
+      <div id="ordersList">
+        <p class="loading-msg">Loading orders…</p>
+      </div>
+    </section>
 
-            <div class="stat-card">
-                <h3>Pending</h3>
-                <strong id="pendingOrders">0</strong>
-            </div>
-
-            <div class="stat-card">
-                <h3>Confirmed</h3>
-                <strong id="confirmedOrders">0</strong>
-            </div>
-
-            <div class="stat-card">
-                <h3>Processing</h3>
-                <strong id="processingOrders">0</strong>
-            </div>
-
-            <div class="stat-card">
-                <h3>Shipped</h3>
-                <strong id="shippedOrders">0</strong>
-            </div>
-
-            <div class="stat-card">
-                <h3>Delivered</h3>
-                <strong id="deliveredOrders">0</strong>
-            </div>
-
-            <div class="stat-card">
-                <h3>Cancelled</h3>
-                <strong id="cancelledOrders">0</strong>
-            </div>
-
-            <div class="stat-card">
-                <h3>Total Sales</h3>
-                <strong id="totalSales">Rs. 0</strong>
-            </div>
-
-        </div>
-
-
-        <!-- ORDERS -->
-
-        <div class="orders-box">
-
-            <div class="orders-header">
-
-                <h2>📦 Orders</h2>
-
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Search order / customer / phone..."
-                    oninput="renderOrders()"
-                >
-
-                <select
-                    id="statusFilter"
-                    onchange="renderOrders()"
-                >
-                    <option value="All">All Orders</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Processing">Processing</option>
-                    <option value="Shipped">Shipped</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Cancelled">Cancelled</option>
-                </select>
-
-            </div>
-
-
-            <div class="table-wrap">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>Order</th>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Phone</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="ordersTable">
-
-                        <tr>
-                            <td colspan="7" class="loading">
-                                Loading orders...
-                            </td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    </div>
-
+  </main>
 </div>
 
+<!-- PRODUCT FORM MODAL -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-card">
+    <button class="modal-close" id="productModalClose" aria-label="Close">✕</button>
+    <h3 id="productModalTitle">Add Product</h3>
+    <form id="productForm">
+      <input type="hidden" id="productId">
 
-<!-- =========================================
-     ORDER DETAILS MODAL
-========================================= -->
+      <div class="field">
+        <label for="pName">Product Name *</label>
+        <input type="text" id="pName" required>
+      </div>
 
-<div
-    class="modal"
-    id="orderModal"
->
+      <div class="field">
+        <label for="pCategory">Category *</label>
+        <select id="pCategory" required>
+          <option>Skincare</option>
+          <option>Makeup</option>
+          <option>Hair Care</option>
+          <option>Body Care</option>
+          <option>Oral Care</option>
+          <option>Personal Care</option>
+          <option>Fragrance</option>
+          <option>Men's Grooming</option>
+          <option>Baby Care</option>
+          <option>Beauty Tools</option>
+        </select>
+      </div>
 
-    <div class="modal-box">
+      <div class="field">
+        <label for="pPrice">Price (Rs.) *</label>
+        <input type="number" id="pPrice" min="0" step="0.01" required>
+      </div>
 
-        <div class="modal-header">
+      <div class="field">
+        <label for="pOriginalPrice">Original Price (Rs.)</label>
+        <input type="number" id="pOriginalPrice" min="0" step="0.01">
+      </div>
 
-            <h2>Order Details</h2>
+      <div class="field">
+        <label for="pDiscount">Discount (%)</label>
+        <input type="number" id="pDiscount" min="0" max="100" step="1">
+      </div>
 
-            <button
-                class="close-btn"
-                onclick="closeModal()"
-            >
-                ✕
-            </button>
+      <div class="field">
+        <label for="pImage1">Main Image URL *</label>
+        <input type="url" id="pImage1" required>
+      </div>
+      <div class="field">
+        <label for="pImage2">Additional Image 2 URL</label>
+        <input type="url" id="pImage2">
+      </div>
+      <div class="field">
+        <label for="pImage3">Additional Image 3 URL</label>
+        <input type="url" id="pImage3">
+      </div>
+      <div class="field">
+        <label for="pImage4">Additional Image 4 URL</label>
+        <input type="url" id="pImage4">
+      </div>
+      <div class="field">
+        <label for="pImage5">Additional Image 5 URL</label>
+        <input type="url" id="pImage5">
+      </div>
+      <div class="img-preview-row" id="imgPreviewRow"></div>
 
-        </div>
+      <div class="field" style="margin-top:14px;">
+        <label for="pDescription">Description</label>
+        <textarea id="pDescription" rows="3"></textarea>
+      </div>
 
-        <div id="orderDetails"></div>
+      <div class="field stock-toggle">
+        <label for="pStock" style="margin-bottom:0;">In Stock</label>
+        <input type="checkbox" id="pStock" checked style="width:auto;">
+      </div>
 
-    </div>
-
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" id="productCancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="productSaveBtn">Save Product</button>
+      </div>
+    </form>
+  </div>
 </div>
 
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-card" style="max-width:360px;">
+    <button class="modal-close" id="confirmModalClose" aria-label="Close">✕</button>
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p class="confirm-text" id="confirmText">Are you sure you want to delete this item?</p>
+    <div class="form-actions">
+      <button type="button" class="btn btn-outline" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirmYesBtn" style="background:var(--red);">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
 
 <script>
-
-/* =========================================
+/* ==========================================================
    SUPABASE SETTINGS
-========================================= */
+   Use the same PROJECT URL and PUBLISHABLE KEY as index.html.
+   NEVER put the Supabase SECRET/service_role key here.
+   ========================================================== */
+const SUPABASE_URL = "https://tmdlhfkggxjexfaumsuq.supabase.co";
+const SUPABASE_KEY = "sb_publishable_TzeEZkbH1FeNLpSGGafX7g_bMA3GH_F";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Supabase Project URL
-const SUPABASE_URL =
-    "https://tmdlhfkggxjexfaumsuq.supabase.co";
+const STATUS_OPTIONS = ["Pending","Confirmed","Processing","Shipped","Delivered","Cancelled"];
 
-// Supabase Publishable Key
-const SUPABASE_KEY =
-    "sb_publishable_TzeEZkbH1FeNLpSGGafX7g_bMA3GH_F";
-
-
-/* =========================================
-   INITIALIZE SUPABASE
-========================================= */
-
-const supabaseClient =
-    supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    );
-
-
-/* =========================================
-   GLOBAL DATA
-========================================= */
-
+let allProducts = [];
 let allOrders = [];
+let deleteTarget = null; // { type:'product'|'order', id }
 
+/* ---------- TOAST ---------- */
+const toastEl = document.getElementById("toast");
+function showToast(message, type){
+  toastEl.textContent = message;
+  toastEl.className = "";
+  if(type) toastEl.classList.add(type);
+  toastEl.classList.add("show");
+  setTimeout(()=>toastEl.classList.remove("show"), 2800);
+}
 
-/* =========================================
-   CHECK LOGIN
-========================================= */
+/* ==========================================================
+   AUTH / LOGIN
+   Requires an admin user created in Supabase Authentication.
+   ========================================================== */
+const loginScreen = document.getElementById("loginScreen");
+const appShell = document.getElementById("appShell");
+const loginError = document.getElementById("loginError");
+const loginBtn = document.getElementById("loginBtn");
 
-async function checkLogin() {
+document.getElementById("loginForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  loginError.style.display = "none";
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Logging in…";
 
-    try {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
 
-        const {
-            data,
-            error
-        } = await supabaseClient.auth.getSession();
+  try{
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
-        if (error) {
-
-            console.error(error);
-
-            showLogin();
-
-            return;
-        }
-
-        if (data.session) {
-
-            showAdmin();
-
-        } else {
-
-            showLogin();
-
-        }
-
-    } catch (error) {
-
-        console.error(error);
-
-        showLogin();
-
+    if(error){
+      console.error("[Aura Glow Admin] Login error:", error);
+      loginError.textContent = "Login failed: " + error.message;
+      loginError.style.display = "block";
+      return;
     }
 
+    showApp();
+
+  }catch(err){
+    console.error("[Aura Glow Admin] Unexpected login error:", err);
+    loginError.textContent = "Login failed: " + ((err && err.message) ? err.message : "Connection error. Please check your internet connection and try again.");
+    loginError.style.display = "block";
+
+  }finally{
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Log In";
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+  await supabaseClient.auth.signOut();
+  appShell.style.display = "none";
+  loginScreen.style.display = "flex";
+});
+
+function showApp(){
+  loginScreen.style.display = "none";
+  appShell.style.display = "flex";
+  loadEverything();
 }
 
+/* Auto-login if a session already exists */
+(async function checkSession(){
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session){
+    showApp();
+  }
+})();
 
-/* =========================================
-   LOGIN
-========================================= */
+/* ---------- TABS ---------- */
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+  });
+});
 
-async function loginAdmin() {
+/* ==========================================================
+   LOAD EVERYTHING
+   ========================================================== */
+async function loadEverything(){
+  await Promise.all([loadProducts(), loadOrders()]);
+  renderStats();
+  renderProducts();
+  renderOrders();
+}
 
-    const email =
-        document
-            .getElementById("email")
-            .value
-            .trim();
+/* ---------- PRODUCTS ---------- */
+async function loadProducts(){
+  const { data, error } = await supabaseClient.from("products").select("*").order("id",{ascending:true});
+  if(error){ console.error("[Aura Glow Admin] Products load error:", error); showToast("Failed to load products: " + error.message, "error"); allProducts = []; return; }
+  allProducts = data || [];
+}
 
-    const password =
-        document
-            .getElementById("password")
-            .value;
+function renderProducts(){
+  const grid = document.getElementById("adminProductGrid");
+  if(allProducts.length === 0){
+    grid.innerHTML = '<p class="empty-msg">No products yet. Click "+ Add Product" to create one.</p>';
+    return;
+  }
+  grid.innerHTML = allProducts.map(p=>{
+    const inStock = p.stock !== false;
+    return `
+      <div class="admin-product-card">
+        <div class="img-wrap"><img src="${p.image_url||''}" alt="${p.name}" loading="lazy"></div>
+        <div class="body">
+          <div class="name">${p.name}</div>
+          <div class="meta">${p.category}</div>
+          <div class="price-line">Rs. ${p.price}${p.original_price ? `<span class="orig">Rs. ${p.original_price}</span>` : ""}${p.discount ? ` · -${p.discount}%` : ""}</div>
+          <span class="badge ${inStock?"in":"out"}">${inStock?"In Stock":"Out of Stock"}</span>
+          <div class="card-actions">
+            <button class="edit-btn" data-id="${p.id}">Edit</button>
+            <button class="delete-btn" data-id="${p.id}">Delete</button>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
 
-    const errorBox =
-        document.getElementById("loginError");
+  grid.querySelectorAll(".edit-btn").forEach(b=>b.addEventListener("click", ()=>openProductForm(parseInt(b.dataset.id))));
+  grid.querySelectorAll(".delete-btn").forEach(b=>b.addEventListener("click", ()=>{
+    deleteTarget = { type:"product", id: parseInt(b.dataset.id) };
+    document.getElementById("confirmTitle").textContent = "Delete Product?";
+    document.getElementById("confirmText").textContent = "Are you sure you want to delete this product?";
+    document.getElementById("confirmModal").classList.add("show");
+  }));
+}
 
-    const loginButton =
-        document.getElementById("loginButton");
+/* ---------- PRODUCT FORM MODAL ---------- */
+const productModal = document.getElementById("productModal");
+const productForm = document.getElementById("productForm");
+const imageInputs = ["pImage1","pImage2","pImage3","pImage4","pImage5"];
 
-
-    errorBox.textContent = "";
-
-
-    if (!email || !password) {
-
-        errorBox.textContent =
-            "Please enter email and password.";
-
-        return;
+function updateImagePreviews(){
+  const row = document.getElementById("imgPreviewRow");
+  row.innerHTML = "";
+  imageInputs.forEach(id=>{
+    const val = document.getElementById(id).value.trim();
+    if(val){
+      const img = document.createElement("img");
+      img.src = val;
+      img.className = "img-preview";
+      img.alt = "Preview";
+      row.appendChild(img);
     }
+  });
+}
+imageInputs.forEach(id=>document.getElementById(id).addEventListener("input", updateImagePreviews));
 
+function openProductForm(id){
+  productForm.reset();
+  document.getElementById("imgPreviewRow").innerHTML = "";
+  document.getElementById("productId").value = "";
 
-    loginButton.disabled = true;
-
-    loginButton.textContent = "Logging in...";
-
-
-    try {
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient.auth
-                .signInWithPassword({
-
-                    email: email,
-
-                    password: password
-
-                });
-
-
-        if (error) {
-
-            console.error(error);
-
-            errorBox.textContent =
-                error.message;
-
-            loginButton.disabled = false;
-
-            loginButton.textContent = "Login";
-
-            return;
-        }
-
-
-        if (data && data.session) {
-
-            errorBox.textContent = "";
-
-            await showAdmin();
-
-        } else {
-
-            errorBox.textContent =
-                "Login failed. Please try again.";
-
-        }
-
-    } catch (error) {
-
-        console.error(error);
-
-        errorBox.textContent =
-            "Something went wrong. Please try again.";
-
-    }
-
-
-    loginButton.disabled = false;
-
-    loginButton.textContent = "Login";
-
+  if(id){
+    const p = allProducts.find(x=>x.id===id);
+    if(!p) return;
+    document.getElementById("productModalTitle").textContent = "Edit Product";
+    document.getElementById("productId").value = p.id;
+    document.getElementById("pName").value = p.name || "";
+    document.getElementById("pCategory").value = p.category || "Skincare";
+    document.getElementById("pPrice").value = p.price || 0;
+    document.getElementById("pOriginalPrice").value = p.original_price || "";
+    document.getElementById("pDiscount").value = p.discount || "";
+    document.getElementById("pDescription").value = p.description || "";
+    document.getElementById("pStock").checked = p.stock !== false;
+    const imgs = Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : [p.image_url].filter(Boolean);
+    imageInputs.forEach((inputId,i)=>{ document.getElementById(inputId).value = imgs[i] || ""; });
+  }else{
+    document.getElementById("productModalTitle").textContent = "Add Product";
+    document.getElementById("pStock").checked = true;
+  }
+  updateImagePreviews();
+  productModal.classList.add("show");
 }
 
+document.getElementById("addProductBtn").addEventListener("click", ()=>openProductForm(null));
+document.getElementById("productModalClose").addEventListener("click", ()=>productModal.classList.remove("show"));
+document.getElementById("productCancelBtn").addEventListener("click", ()=>productModal.classList.remove("show"));
 
-/* =========================================
-   LOGOUT
-========================================= */
+productForm.addEventListener("submit", async function(e){
+  e.preventDefault();
+  const saveBtn = document.getElementById("productSaveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving…";
 
-async function logoutAdmin() {
+  const images = imageInputs.map(id=>document.getElementById(id).value.trim()).filter(Boolean);
+  const mainImage = images[0] || "";
 
-    await supabaseClient.auth.signOut();
+  const payload = {
+    name: document.getElementById("pName").value.trim(),
+    category: document.getElementById("pCategory").value,
+    price: parseFloat(document.getElementById("pPrice").value) || 0,
+    original_price: document.getElementById("pOriginalPrice").value ? parseFloat(document.getElementById("pOriginalPrice").value) : null,
+    discount: document.getElementById("pDiscount").value ? parseFloat(document.getElementById("pDiscount").value) : 0,
+    image_url: mainImage,
+    image_urls: images,
+    description: document.getElementById("pDescription").value.trim(),
+    stock: document.getElementById("pStock").checked
+  };
 
-    allOrders = [];
+  const id = document.getElementById("productId").value;
+  let error;
 
-    showLogin();
+  if(id){
+    ({ error } = await supabaseClient.from("products").update(payload).eq("id", id));
+  }else{
+    ({ error } = await supabaseClient.from("products").insert([payload]));
+  }
 
+  saveBtn.disabled = false;
+  saveBtn.textContent = "Save Product";
+
+  if(error){
+    showToast("Could not save product: " + error.message, "error");
+    return;
+  }
+
+  showToast(id ? "Product updated." : "Product added.", "success");
+  productModal.classList.remove("show");
+  await loadProducts();
+  renderProducts();
+  renderStats();
+});
+
+/* ---------- ORDERS ---------- */
+async function loadOrders(){
+  const { data, error } = await supabaseClient.from("orders").select("*").order("created_at",{ascending:false});
+  if(error){ console.error("[Aura Glow Admin] Orders load error:", error); showToast("Failed to load orders: " + error.message, "error"); allOrders = []; return; }
+  allOrders = data || [];
 }
 
+function renderOrders(filterText){
+  const list = document.getElementById("ordersList");
+  const term = (filterText||"").toLowerCase().trim();
+  const filtered = term
+    ? allOrders.filter(o => (o.customer_name||"").toLowerCase().includes(term) || (o.phone||"").includes(term))
+    : allOrders;
 
-/* =========================================
-   SHOW LOGIN
-========================================= */
+  if(filtered.length === 0){
+    list.innerHTML = '<p class="empty-msg">No orders found.</p>';
+    return;
+  }
 
-function showLogin() {
+  list.innerHTML = filtered.map(o=>{
+    const products = Array.isArray(o.products) ? o.products : [];
+    const date = o.created_at ? new Date(o.created_at).toLocaleString() : "";
+    return `
+      <div class="order-card">
+        <div class="order-top">
+          <div>
+            <div class="order-id">Order #${o.id}</div>
+            <div class="order-date">${date}</div>
+          </div>
+          <span class="status-pill status-${o.status||"Pending"}">${o.status||"Pending"}</span>
+        </div>
+        <div class="order-customer"><strong>${o.customer_name||""}</strong> · ${o.phone||""}</div>
+        <div class="order-total">Total: Rs. ${o.total||0}</div>
+        <div class="order-actions">
+          <select class="status-select" data-id="${o.id}">
+            ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${s===o.status?"selected":""}>${s}</option>`).join("")}
+          </select>
+          <button class="view-btn" data-id="${o.id}">View Details</button>
+          <button class="delete-btn" data-id="${o.id}">Delete</button>
+        </div>
+        <div class="order-details" id="orderDetails-${o.id}">
+          <div><strong>Address:</strong> ${o.address||""}</div>
+          ${o.notes ? `<div style="margin-top:4px;white-space:pre-line;"><strong>Notes:</strong> ${o.notes}</div>` : ""}
+          <div style="margin-top:8px;"><strong>Products:</strong></div>
+          ${products.map(p=>`<div class="order-line"><span>${p.name} × ${p.quantity}</span><span>Rs. ${p.subtotal}</span></div>`).join("")}
+        </div>
+      </div>`;
+  }).join("");
 
-    document.getElementById("loginPage")
-        .style.display = "flex";
+  list.querySelectorAll(".status-select").forEach(sel=>{
+    sel.addEventListener("change", async ()=>{
+      const { error } = await supabaseClient.from("orders").update({ status: sel.value }).eq("id", sel.dataset.id);
+      if(error){ showToast("Could not update status.", "error"); return; }
+      showToast("Order status updated.", "success");
+      await loadOrders();
+      renderStats();
+      renderOrders(document.getElementById("orderSearch").value);
+    });
+  });
 
-    document.getElementById("adminPage")
-        .style.display = "none";
+  list.querySelectorAll(".view-btn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      document.getElementById("orderDetails-"+b.dataset.id).classList.toggle("open");
+    });
+  });
 
+  list.querySelectorAll(".order-card .delete-btn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      deleteTarget = { type:"order", id: b.dataset.id };
+      document.getElementById("confirmTitle").textContent = "Delete Order?";
+      document.getElementById("confirmText").textContent = "Are you sure you want to delete this order?";
+      document.getElementById("confirmModal").classList.add("show");
+    });
+  });
 }
 
+document.getElementById("orderSearch").addEventListener("input", (e)=>renderOrders(e.target.value));
 
-/* =========================================
-   SHOW ADMIN
-========================================= */
+/* ---------- DELETE CONFIRM (shared: product or order) ---------- */
+const confirmModal = document.getElementById("confirmModal");
+document.getElementById("confirmModalClose").addEventListener("click", ()=>confirmModal.classList.remove("show"));
+document.getElementById("confirmCancelBtn").addEventListener("click", ()=>confirmModal.classList.remove("show"));
 
-async function showAdmin() {
+document.getElementById("confirmYesBtn").addEventListener("click", async ()=>{
+  if(!deleteTarget) return;
+  const { type, id } = deleteTarget;
 
-    document.getElementById("loginPage")
-        .style.display = "none";
+  const table = type === "product" ? "products" : "orders";
+  const { error } = await supabaseClient.from(table).delete().eq("id", id);
 
-    document.getElementById("adminPage")
-        .style.display = "block";
+  confirmModal.classList.remove("show");
+  deleteTarget = null;
 
+  if(error){
+    showToast("Delete failed: " + error.message, "error");
+    return;
+  }
 
+  showToast(type === "product" ? "Product deleted." : "Order deleted.", "success");
+
+  if(type === "product"){
+    await loadProducts();
+    renderProducts();
+  }else{
     await loadOrders();
+    renderOrders(document.getElementById("orderSearch").value);
+  }
+  renderStats();
+});
 
+/* ---------- STATS ---------- */
+function renderStats(){
+  const grid = document.getElementById("statsGrid");
+  const totalProducts = allProducts.length;
+  const inStock = allProducts.filter(p=>p.stock !== false).length;
+  const outOfStock = totalProducts - inStock;
+
+  const countByStatus = s => allOrders.filter(o=>(o.status||"Pending")===s).length;
+  const totalOrders = allOrders.length;
+  const totalSales = allOrders.reduce((sum,o)=>sum + (Number(o.total)||0), 0);
+
+  const stats = [
+    { label:"Total Products", value: totalProducts },
+    { label:"In Stock", value: inStock },
+    { label:"Out of Stock", value: outOfStock },
+    { label:"Total Orders", value: totalOrders },
+    { label:"Pending", value: countByStatus("Pending") },
+    { label:"Confirmed", value: countByStatus("Confirmed") },
+    { label:"Processing", value: countByStatus("Processing") },
+    { label:"Shipped", value: countByStatus("Shipped") },
+    { label:"Delivered", value: countByStatus("Delivered") },
+    { label:"Cancelled", value: countByStatus("Cancelled") },
+    { label:"Total Sales", value: "Rs. " + totalSales }
+  ];
+
+  grid.innerHTML = stats.map(s=>`
+    <div class="stat-card">
+      <div class="num">${s.value}</div>
+      <div class="label">${s.label}</div>
+    </div>`).join("");
 }
-
-
-/* =========================================
-   LOAD ORDERS
-========================================= */
-
-async function loadOrders() {
-
-    const table =
-        document.getElementById("ordersTable");
-
-    table.innerHTML = `
-        <tr>
-            <td colspan="7" class="loading">
-                Loading orders...
-            </td>
-        </tr>
-    `;
-
-
-    try {
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient
-
-                .from("orders")
-
-                .select("*")
-
-                .order(
-                    "created_at",
-                    {
-                        ascending: false
-                    }
-                );
-
-
-        if (error) {
-
-            console.error(error);
-
-            table.innerHTML = `
-                <tr>
-                    <td colspan="7" class="empty">
-                        Could not load orders.
-                    </td>
-                </tr>
-            `;
-
-            return;
-        }
-
-
-        allOrders = data || [];
-
-        updateDashboard();
-
-        renderOrders();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        table.innerHTML = `
-            <tr>
-                <td colspan="7" class="empty">
-                    Something went wrong while loading orders.
-                </td>
-            </tr>
-        `;
-
-    }
-
-}
-
-
-/* =========================================
-   UPDATE DASHBOARD
-========================================= */
-
-function updateDashboard() {
-
-    document.getElementById("totalOrders")
-        .textContent =
-        allOrders.length;
-
-
-    document.getElementById("pendingOrders")
-        .textContent =
-        countStatus("Pending");
-
-
-    document.getElementById("confirmedOrders")
-        .textContent =
-        countStatus("Confirmed");
-
-
-    document.getElementById("processingOrders")
-        .textContent =
-        countStatus("Processing");
-
-
-    document.getElementById("shippedOrders")
-        .textContent =
-        countStatus("Shipped");
-
-
-    document.getElementById("deliveredOrders")
-        .textContent =
-        countStatus("Delivered");
-
-
-    document.getElementById("cancelledOrders")
-        .textContent =
-        countStatus("Cancelled");
-
-
-    const sales =
-        allOrders
-
-            .filter(
-                order =>
-                    order.status !== "Cancelled"
-            )
-
-            .reduce(
-                (sum, order) =>
-                    sum +
-                    Number(order.total || 0),
-
-                0
-            );
-
-
-    document.getElementById("totalSales")
-        .textContent =
-        "Rs. " +
-        sales.toLocaleString();
-
-}
-
-
-/* =========================================
-   COUNT STATUS
-========================================= */
-
-function countStatus(status) {
-
-    return allOrders.filter(
-        order =>
-            order.status === status
-    ).length;
-
-}
-
-
-/* =========================================
-   RENDER ORDERS
-========================================= */
-
-function renderOrders() {
-
-    const table =
-        document.getElementById("ordersTable");
-
-
-    const search =
-        document
-            .getElementById("searchInput")
-            .value
-            .toLowerCase()
-            .trim();
-
-
-    const filter =
-        document
-            .getElementById("statusFilter")
-            .value;
-
-
-    let orders =
-        allOrders.filter(order => {
-
-            const matchesSearch =
-
-                !search ||
-
-                String(order.id)
-                    .toLowerCase()
-                    .includes(search) ||
-
-                String(order.customer_name || "")
-                    .toLowerCase()
-                    .includes(search) ||
-
-                String(order.phone || "")
-                    .toLowerCase()
-                    .includes(search);
-
-
-            const matchesStatus =
-
-                filter === "All" ||
-
-                order.status === filter;
-
-
-            return (
-                matchesSearch &&
-                matchesStatus
-            );
-
-        });
-
-
-    if (orders.length === 0) {
-
-        table.innerHTML = `
-            <tr>
-                <td colspan="7" class="empty">
-                    No orders found.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-
-    table.innerHTML =
-        orders.map(order => {
-
-            const date =
-                order.created_at
-                    ? new Date(
-                        order.created_at
-                    ).toLocaleString()
-                    : "-";
-
-
-            const status =
-                order.status || "Pending";
-
-
-            const statusClass =
-                status.toLowerCase();
-
-
-            return `
-
-                <tr>
-
-                    <td>
-                        <strong>
-                            #${order.id}
-                        </strong>
-                    </td>
-
-
-                    <td>
-                        ${escapeHTML(date)}
-                    </td>
-
-
-                    <td>
-                        ${escapeHTML(
-                            order.customer_name || "-"
-                        )}
-                    </td>
-
-
-                    <td>
-                        ${escapeHTML(
-                            order.phone || "-"
-                        )}
-                    </td>
-
-
-                    <td>
-                        Rs.
-                        ${Number(
-                            order.total || 0
-                        ).toLocaleString()}
-                    </td>
-
-
-                    <td>
-
-                        <select
-                            class="status-select"
-                            onchange="changeStatus(${order.id}, this.value)"
-                        >
-
-                            <option
-                                value="Pending"
-                                ${status === "Pending" ? "selected" : ""}
-                            >
-                                Pending
-                            </option>
-
-                            <option
-                                value="Confirmed"
-                                ${status === "Confirmed" ? "selected" : ""}
-                            >
-                                Confirmed
-                            </option>
-
-                            <option
-                                value="Processing"
-                                ${status === "Processing" ? "selected" : ""}
-                            >
-                                Processing
-                            </option>
-
-                            <option
-                                value="Shipped"
-                                ${status === "Shipped" ? "selected" : ""}
-                            >
-                                Shipped
-                            </option>
-
-                            <option
-                                value="Delivered"
-                                ${status === "Delivered" ? "selected" : ""}
-                            >
-                                Delivered
-                            </option>
-
-                            <option
-                                value="Cancelled"
-                                ${status === "Cancelled" ? "selected" : ""}
-                            >
-                                Cancelled
-                            </option>
-
-                        </select>
-
-                    </td>
-
-
-                    <td>
-
-                        <div class="actions">
-
-                            <button
-                                class="view-btn"
-                                onclick="viewOrder(${order.id})"
-                            >
-                                View
-                            </button>
-
-
-                            <button
-                                class="delete-btn"
-                                onclick="deleteOrder(${order.id})"
-                            >
-                                Delete
-                            </button>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-            `;
-
-        }).join("");
-
-}
-
-
-/* =========================================
-   CHANGE STATUS
-========================================= */
-
-async function changeStatus(
-    orderId,
-    newStatus
-) {
-
-    try {
-
-        const {
-            error
-        } =
-            await supabaseClient
-
-                .from("orders")
-
-                .update({
-                    status: newStatus
-                })
-
-                .eq("id", orderId);
-
-
-        if (error) {
-
-            console.error(error);
-
-            alert(
-                "Could not change order status."
-            );
-
-            return;
-        }
-
-
-        const order =
-            allOrders.find(
-                item =>
-                    item.id === orderId
-            );
-
-
-        if (order) {
-
-            order.status =
-                newStatus;
-
-        }
-
-
-        updateDashboard();
-
-        renderOrders();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Something went wrong."
-        );
-
-    }
-
-}
-
-
-/* =========================================
-   VIEW ORDER
-========================================= */
-
-function viewOrder(orderId) {
-
-    const order =
-        allOrders.find(
-            item =>
-                item.id === orderId
-        );
-
-
-    if (!order) {
-
-        alert("Order not found.");
-
-        return;
-    }
-
-
-    const details =
-        document.getElementById(
-            "orderDetails"
-        );
-
-
-    let productsHTML = "";
-
-
-    try {
-
-        let products =
-            order.products;
-
-
-        if (typeof products === "string") {
-
-            products =
-                JSON.parse(products);
-
-        }
-
-
-        if (!Array.isArray(products)) {
-
-            products = [];
-
-        }
-
-
-        if (products.length === 0) {
-
-            productsHTML =
-                `<div class="product-item">
-                    No product details available.
-                </div>`;
-
-        } else {
-
-            productsHTML =
-                products.map(product => {
-
-                    const name =
-                        product.name ||
-                        product.product_name ||
-                        "Product";
-
-
-                    const quantity =
-                        product.quantity ||
-                        1;
-
-
-                    const price =
-                        Number(
-                            product.price || 0
-                        );
-
-
-                    return `
-                        <div class="product-item">
-
-                            <strong>
-                                ${escapeHTML(name)}
-                            </strong>
-
-                            <div>
-                                Quantity:
-                                ${quantity}
-                            </div>
-
-                            <div>
-                                Price:
-                                Rs. ${price.toLocaleString()}
-                            </div>
-
-                        </div>
-                    `;
-
-                }).join("");
-
-        }
-
-    } catch (error) {
-
-        productsHTML =
-            `<div class="product-item">
-                Product information could not be displayed.
-            </div>`;
-
-    }
-
-
-    details.innerHTML = `
-
-        <div class="detail">
-
-            <strong>Order ID</strong>
-
-            <div>
-                #${order.id}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Customer Name</strong>
-
-            <div>
-                ${escapeHTML(
-                    order.customer_name || "-"
-                )}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Phone</strong>
-
-            <div>
-                ${escapeHTML(
-                    order.phone || "-"
-                )}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Address</strong>
-
-            <div>
-                ${escapeHTML(
-                    order.address || "-"
-                )}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Notes</strong>
-
-            <div>
-                ${escapeHTML(
-                    order.notes || "-"
-                )}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Status</strong>
-
-            <div>
-                ${escapeHTML(
-                    order.status || "Pending"
-                )}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Products</strong>
-
-            <div>
-                ${productsHTML}
-            </div>
-
-        </div>
-
-
-        <div class="detail">
-
-            <strong>Total</strong>
-
-            <div>
-                Rs.
-                ${Number(
-                    order.total || 0
-                ).toLocaleString()}
-            </div>
-
-        </div>
-
-    `;
-
-
-    document.getElementById("orderModal")
-        .style.display = "flex";
-
-}
-
-
-/* =========================================
-   CLOSE MODAL
-========================================= */
-
-function closeModal() {
-
-    document.getElementById("orderModal")
-        .style.display = "none";
-
-}
-
-
-/* =========================================
-   DELETE ORDER
-========================================= */
-
-async function deleteOrder(orderId) {
-
-    const confirmed =
-        confirm(
-            "Are you sure you want to delete this order?"
-        );
-
-
-    if (!confirmed) {
-
-        return;
-
-    }
-
-
-    try {
-
-        const {
-            error
-        } =
-            await supabaseClient
-
-                .from("orders")
-
-                .delete()
-
-                .eq("id", orderId);
-
-
-        if (error) {
-
-            console.error(error);
-
-            alert(
-                "Could not delete order."
-            );
-
-            return;
-        }
-
-
-        allOrders =
-            allOrders.filter(
-                order =>
-                    order.id !== orderId
-            );
-
-
-        updateDashboard();
-
-        renderOrders();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "Something went wrong."
-        );
-
-    }
-
-}
-
-
-/* =========================================
-   ESCAPE HTML
-========================================= */
-
-function escapeHTML(value) {
-
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-}
-
-
-/* =========================================
-   ENTER KEY LOGIN
-========================================= */
-
-document
-    .getElementById("password")
-    .addEventListener(
-        "keydown",
-        function(event) {
-
-            if (event.key === "Enter") {
-
-                loginAdmin();
-
-            }
-
-        }
-    );
-
-
-/* =========================================
-   CLOSE MODAL WHEN CLICKING OUTSIDE
-========================================= */
-
-document
-    .getElementById("orderModal")
-    .addEventListener(
-        "click",
-        function(event) {
-
-            if (
-                event.target ===
-                document.getElementById("orderModal")
-            ) {
-
-                closeModal();
-
-            }
-
-        }
-    );
-
-
-/* =========================================
-   START
-========================================= */
-
-checkLogin();
-
 </script>
-
 </body>
 </html>
