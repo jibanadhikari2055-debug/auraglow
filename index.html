@@ -669,6 +669,7 @@ nav.main-nav a:hover{color:var(--primary);}
   width:28px;
   height:28px;
   border-radius:50%;
+  z-index:10;
 }
 .submit-order-btn{
   width:100%;
@@ -812,7 +813,7 @@ nav.main-nav a:hover{color:var(--primary);}
 }
 
 /* IMAGE GALLERY (product detail) */
-.gallery-wrap{margin-bottom:14px;}
+.gallery-wrap{margin:18px auto 14px;max-width:84%;}
 .gallery-main{
   position:relative;
   width:100%;
@@ -862,10 +863,11 @@ nav.main-nav a:hover{color:var(--primary);}
   margin-top:8px;
   overflow-x:auto;
   padding-bottom:2px;
+  justify-content:center;
 }
 .gallery-thumb{
-  width:52px;
-  height:52px;
+  width:48px;
+  height:48px;
   object-fit:contain;
   background:var(--secondary);
   border-radius:8px;
@@ -876,6 +878,36 @@ nav.main-nav a:hover{color:var(--primary);}
   transition:opacity var(--transition), border-color var(--transition);
 }
 .gallery-thumb.active{border-color:var(--primary);opacity:1;}
+
+/* WISHLIST HEART ON PRODUCT CARD */
+.wishlist-heart-btn{
+  position:absolute;
+  top:8px;
+  right:8px;
+  z-index:3;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.9);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1rem;
+  color:#c9a7a7;
+  box-shadow:0 2px 6px rgba(0,0,0,0.12);
+  transition:transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.wishlist-heart-btn:active{transform:scale(0.85);}
+.wishlist-heart-btn.active{
+  color:#fff;
+  background:var(--primary);
+  animation:heartPop 0.35s ease;
+}
+@keyframes heartPop{
+  0%{transform:scale(1);}
+  40%{transform:scale(1.35);}
+  100%{transform:scale(1);}
+}
 
 /* CONTACT / FOOTER */
 .contact{
@@ -981,6 +1013,11 @@ textarea:focus-visible{
     </nav>
 
     <div class="header-actions">
+      <button class="cart-btn" id="wishlistOpenBtn" aria-label="Open wishlist">
+        ❤️
+        <span class="cart-badge" id="wishlistBadge">0</span>
+      </button>
+
       <button class="cart-btn" id="cartOpenBtn" aria-label="Open cart">
         🛍️
         <span class="cart-badge" id="cartBadge">0</span>
@@ -1057,6 +1094,18 @@ textarea:focus-visible{
     <button class="place-order-btn" id="placeOrderBtn" disabled>
       Place Order
     </button>
+  </div>
+</aside>
+
+<!-- WISHLIST DRAWER -->
+<aside class="cart-drawer" id="wishlistDrawer" aria-label="Wishlist">
+  <div class="cart-header">
+    <h3>Your Wishlist</h3>
+    <button class="close-btn" id="wishlistCloseBtn" aria-label="Close wishlist">✕</button>
+  </div>
+
+  <div class="cart-items" id="wishlistItemsContainer">
+    <p class="cart-empty">Your wishlist is empty.</p>
   </div>
 </aside>
 
@@ -1432,6 +1481,13 @@ function renderProducts(){
           : ""
       }
 
+      <button
+        class="wishlist-heart-btn${isWishlisted(p.id) ? " active" : ""}"
+        data-id="${p.id}"
+        type="button"
+        aria-label="${isWishlisted(p.id) ? "Remove from wishlist" : "Add to wishlist"}"
+      >${isWishlisted(p.id) ? "❤️" : "🤍"}</button>
+
       <div class="product-img-wrap">
         <img
           src="${p.imageUrl}"
@@ -1581,6 +1637,30 @@ function renderProducts(){
         openBuyNow(
           parseInt(btn.dataset.id)
         );
+
+      });
+
+    });
+
+
+  /* WISHLIST HEART TOGGLE */
+
+  grid.querySelectorAll(".wishlist-heart-btn")
+    .forEach(btn => {
+
+      btn.addEventListener("click", (e) => {
+
+        e.stopPropagation();
+
+        const id = parseInt(btn.dataset.id);
+
+        toggleWishlist(id);
+
+        const active = isWishlisted(id);
+
+        btn.classList.toggle("active", active);
+        btn.textContent = active ? "❤️" : "🤍";
+        btn.setAttribute("aria-label", active ? "Remove from wishlist" : "Add to wishlist");
 
       });
 
@@ -1934,6 +2014,8 @@ const overlay =
 
 
 function openCart(){
+
+  closeWishlist();
 
   cartDrawer.classList.add("open");
 
@@ -2350,10 +2432,25 @@ function openProductDetail(id){
         Buy Now
       </button>
 
+      <button
+        class="add-cart-btn"
+        id="detailWishlistBtn"
+        style="flex:0 0 auto;padding:12px 14px;">
+        ${isWishlisted(p.id) ? "❤️" : "🤍"}
+      </button>
+
     </div>
   `;
 
   initGallery(images);
+
+  document
+    .getElementById("detailWishlistBtn")
+    .addEventListener("click", () => {
+      toggleWishlist(p.id);
+      const btn = document.getElementById("detailWishlistBtn");
+      btn.textContent = isWishlisted(p.id) ? "❤️" : "🤍";
+    });
 
   if(!outOfStock){
 
@@ -2479,6 +2576,8 @@ overlay.addEventListener(
     closeOrderModal();
 
     closeDetailModal();
+
+    closeWishlist();
 
   }
 );
@@ -2876,6 +2975,8 @@ async function initApp(){
 
   renderCart();
 
+  renderWishlistBadge();
+
 
   /* BRANDING */
 
@@ -2927,6 +3028,104 @@ async function initApp(){
     .href = waLink(defaultMsg);
 
 }
+
+</script>
+
+
+<!-- =================================================
+     CUSTOM / NEW FEATURES SECTION
+     ---------------------------------------------------
+     Add future features here as their own block (state +
+     functions), then wire up any buttons/markup they need
+     in the sections above. Keeping feature logic isolated
+     here means most new features only need code ADDED to
+     this section instead of touching the rest of the file.
+     (Features that need a new button or badge in the HTML —
+     like the wishlist heart on each card — still need a
+     small markup addition where that button lives; only the
+     feature's state/logic is guaranteed to live here.)
+     ================================================= -->
+<script>
+
+/* ---------- WISHLIST ---------- */
+
+let wishlist = JSON.parse(localStorage.getItem("auraGlowWishlist") || "[]"); // array of product ids
+
+function saveWishlist(){
+  localStorage.setItem("auraGlowWishlist", JSON.stringify(wishlist));
+}
+
+function isWishlisted(id){
+  return wishlist.includes(id);
+}
+
+function toggleWishlist(id){
+  if(isWishlisted(id)){
+    wishlist = wishlist.filter(i => i !== id);
+  }else{
+    wishlist.push(id);
+  }
+  saveWishlist();
+  renderWishlistBadge();
+  renderWishlistDrawer();
+}
+
+function renderWishlistBadge(){
+  const badge = document.getElementById("wishlistBadge");
+  if(!badge) return;
+  badge.textContent = wishlist.length;
+  badge.classList.add("bump");
+  setTimeout(() => badge.classList.remove("bump"), 350);
+}
+
+function renderWishlistDrawer(){
+  const container = document.getElementById("wishlistItemsContainer");
+  if(!container) return;
+
+  const items = wishlist.map(id => findProduct(id)).filter(Boolean);
+
+  if(items.length === 0){
+    container.innerHTML = '<p class="cart-empty">Your wishlist is empty.</p>';
+    return;
+  }
+
+  container.innerHTML = items.map(p => `
+    <div class="cart-item">
+      <img src="${p.imageUrl}" alt="${p.name}" loading="lazy">
+      <div class="cart-item-info">
+        <span class="cart-item-name">${p.name}</span>
+        <span class="cart-item-price">Rs. ${p.price}</span>
+        <div class="qty-controls" style="margin-top:4px;">
+          <button class="add-cart-btn" style="padding:6px 12px;font-size:0.72rem;" data-action="wl-add" data-id="${p.id}" ${p.stock===false ? "disabled" : ""}>Add to Cart</button>
+        </div>
+        <button class="remove-btn" data-action="wl-remove" data-id="${p.id}">Remove</button>
+      </div>
+    </div>
+  `).join("");
+
+  container.querySelectorAll('[data-action="wl-add"]').forEach(btn => {
+    btn.addEventListener("click", () => addToCart(parseInt(btn.dataset.id)));
+  });
+  container.querySelectorAll('[data-action="wl-remove"]').forEach(btn => {
+    btn.addEventListener("click", () => toggleWishlist(parseInt(btn.dataset.id)));
+  });
+}
+
+const wishlistDrawer = document.getElementById("wishlistDrawer");
+
+function openWishlist(){
+  closeCart();
+  renderWishlistDrawer();
+  wishlistDrawer.classList.add("open");
+  overlay.classList.add("show");
+}
+function closeWishlist(){
+  wishlistDrawer.classList.remove("open");
+  overlay.classList.remove("show");
+}
+
+document.getElementById("wishlistOpenBtn").addEventListener("click", openWishlist);
+document.getElementById("wishlistCloseBtn").addEventListener("click", closeWishlist);
 
 </script>
 
