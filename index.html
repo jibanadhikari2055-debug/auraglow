@@ -1071,6 +1071,73 @@ textarea:focus-visible{
     transition:none !important;
   }
 }
+
+/* ==========================================================
+   MOBILE LAYOUT (phones): ~90% effective zoom + always 2 columns
+   Only affects screens up to 599px wide. Desktop/tablet unchanged.
+   ========================================================== */
+@media (max-width:599px){
+
+  /* Slightly zoomed-out look (about 90%), done in CSS, not browser zoom */
+  body{
+    zoom:0.9;
+    overflow-x:hidden;
+  }
+
+  /* Header: keep logo, name and buttons on one line */
+  .header-inner{padding:10px 12px;}
+  .brand{min-width:0;gap:8px;}
+  .brand-logo{width:36px;height:36px;}
+  .brand-name{font-size:1.1rem;}
+  .header-actions{gap:8px;}
+
+  /* Products: always exactly 2 columns */
+  .products{padding-left:12px;padding-right:12px;}
+  .product-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .product-card{min-width:0;}
+  .product-info{padding:8px 9px 10px;}
+  .product-name{
+    font-size:0.82rem;
+    overflow-wrap:anywhere;
+  }
+  .product-price{font-size:0.92rem;}
+  .original-price{font-size:0.72rem;}
+  .product-actions{gap:5px;}
+  .add-cart-btn,
+  .buy-now-btn{
+    min-width:0;
+    padding:8px 3px;
+    font-size:0.7rem;
+  }
+
+  /* Related products inside product details: 2 columns, no overflow */
+  .related-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+
+  /* Footer: 2 columns */
+  .footer-inner{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px 14px;
+  }
+  footer p,
+  footer a{overflow-wrap:anywhere;}
+}
+
+/* Very small phones (320px - 359px) */
+@media (max-width:359px){
+  .brand-name{font-size:1rem;}
+  .brand-tag{font-size:0.6rem;}
+  .brand-logo{width:32px;height:32px;}
+  .header-actions{gap:6px;}
+  .cart-btn{width:36px;height:36px;}
+  .products{padding-left:10px;padding-right:10px;}
+  .product-grid{gap:8px;}
+}
 </style>
 </head>
 
