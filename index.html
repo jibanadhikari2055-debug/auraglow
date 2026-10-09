@@ -11,10 +11,10 @@
 
 <style>
 :root{
-  --primary:#D98C8C;
-  --primary-dark:#c26f6f;
-  --secondary:#F8E9E7;
-  --bg:#FFF9F8;
+  --primary:#ff004e;
+  --primary-dark:#d1003f;
+  --secondary:#FFE6EE;
+  --bg:#FFF6F9;
   --dark:#2F2F2F;
   --white:#FFFFFF;
   --radius:14px;
@@ -181,7 +181,7 @@ nav.main-nav a:hover{color:var(--primary);}
 .btn-primary{
   background:var(--primary);
   color:#fff;
-  box-shadow:0 6px 16px rgba(217,140,140,0.35);
+  box-shadow:0 6px 16px rgba(255,0,78,0.30);
 }
 .btn-primary:hover{background:var(--primary-dark);}
 .btn-outline{
@@ -363,7 +363,7 @@ nav.main-nav a:hover{color:var(--primary);}
   background:var(--secondary);
   color:var(--primary-dark);
 }
-.add-cart-btn:hover{background:#f0d5d2;}
+.add-cart-btn:hover{background:#ffd1e0;}
 .buy-now-btn{
   background:var(--primary);
   color:#fff;
@@ -401,7 +401,7 @@ nav.main-nav a:hover{color:var(--primary);}
   display:flex;
   align-items:center;
   gap:7px;
-  box-shadow:0 8px 20px rgba(217,140,140,0.45);
+  box-shadow:0 8px 20px rgba(255,0,78,0.40);
   z-index:900;
   font-size:0.9rem;
 }
@@ -974,7 +974,7 @@ nav.main-nav a:hover{color:var(--primary);}
   align-items:center;
   justify-content:center;
   font-size:1rem;
-  color:#c9a7a7;
+  color:#e3a1b6;
   box-shadow:0 2px 6px rgba(0,0,0,0.12);
   transition:transform 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
@@ -3281,6 +3281,16 @@ const DEFAULT_PRODUCTS = [
     description: "SKIN1004 Madagascar Centella Water-Fit Sun Serum is a viral SPF 50+ PA++++ sunscreen with an ultra-lightweight, watery serum texture. It combines Madagascar Centella Asiatica and Hyaluronic Acid to instantly soothe redness, deeply hydrate, and leave a weightless, zero-white-cast, natural glow.",
     stock: true,
     discount: 27
+  },
+  {
+    name: "Beauty of Joseon Sunscreen SPF50+ PA++++",
+    category: "Skincare",
+    price: 1200,
+    original_price: 2100,
+    image_url: "https://i.ibb.co/zWW0mG6m/file-0000000032148211882b9f10fdf471f2.png",
+    description: "Beauty of Joseon Relief Sun is a viral Korean sunscreen that feels like a lightweight moisturizer, offering SPF 50+ PA++++ protection with 30% rice extract for a hydrating, white-cast-free, dewy glow.",
+    stock: true,
+    discount: 40
   },
   {
     name: "SP-6 Probiotic Whitening Toothpaste",
