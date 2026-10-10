@@ -698,54 +698,200 @@ nav.main-nav a:hover{color:var(--primary);}
   margin-top:6px;
 }
 
-/* THANK YOU */
+/* THANK YOU / ORDER PLACED */
+.thankyou-modal{
+  background:rgba(47,47,47,0.28);
+  -webkit-backdrop-filter:blur(3px);
+  backdrop-filter:blur(3px);
+  padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
 .thankyou-box{
-  max-width:430px;
+  max-width:400px;
   text-align:center;
+  padding:26px 20px 20px;
+  border-radius:22px;
+  box-shadow:0 22px 55px rgba(255,0,78,0.18), 0 6px 18px rgba(0,0,0,0.08);
+  max-height:calc(100vh - 32px);
+  max-height:calc(100dvh - 32px);
+  overscroll-behavior:contain;
 }
 .thankyou-icon{
-  width:70px;
-  height:70px;
+  position:relative;
+  width:68px;
+  height:68px;
   border-radius:50%;
-  background:#e8f7ee;
-  color:#258a4a;
+  background:#e6f8ee;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:2rem;
-  margin:4px auto 14px;
-  animation:popIn 0.45s cubic-bezier(.34,1.56,.64,1);
+  margin:0 auto 14px;
 }
-@keyframes popIn{
-  0%{transform:scale(0);opacity:0;}
-  70%{transform:scale(1.15);opacity:1;}
-  100%{transform:scale(1);}
+.thankyou-icon svg{width:34px;height:34px;display:block;}
+.thankyou-icon .ty-check{
+  fill:none;
+  stroke:#1f9d55;
+  stroke-width:3.2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:30;
+  stroke-dashoffset:0;
+}
+.thankyou-icon::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:2px solid rgba(31,157,85,0.35);
+  opacity:0;
+}
+#thankYouModal.show .thankyou-icon{animation:tyPop 0.45s cubic-bezier(.34,1.4,.64,1);}
+#thankYouModal.show .thankyou-icon .ty-check{animation:tyDraw 0.45s ease 0.2s both;}
+#thankYouModal.show .thankyou-icon::after{animation:tyRing 0.9s ease 0.25s 1;}
+@keyframes tyPop{
+  0%{transform:scale(0.6);opacity:0;}
+  100%{transform:scale(1);opacity:1;}
+}
+@keyframes tyDraw{
+  from{stroke-dashoffset:30;}
+  to{stroke-dashoffset:0;}
+}
+@keyframes tyRing{
+  0%{transform:scale(1);opacity:0.7;}
+  100%{transform:scale(1.45);opacity:0;}
 }
 .thankyou-box h3{
-  font-size:1.45rem;
-  margin-bottom:8px;
+  font-size:1.4rem;
+  font-weight:800;
+  letter-spacing:-0.01em;
+  line-height:1.2;
+  color:var(--dark);
+  margin:0 0 8px;
 }
-.thankyou-box p{
+.thankyou-box .ty-lead{
+  color:var(--primary-dark);
+  font-weight:700;
+  font-size:0.95rem;
+  margin:0 0 6px;
+}
+.thankyou-box .ty-sub{
   color:#666;
-  font-size:0.9rem;
-  margin-bottom:8px;
+  font-size:0.85rem;
+  line-height:1.55;
+  margin:0 0 14px;
 }
 .order-reference{
-  background:var(--secondary);
-  border-radius:10px;
-  padding:12px;
-  margin:15px 0;
+  background:linear-gradient(135deg,#fff3f7,#ffe3ec);
+  border:1px solid rgba(255,0,78,0.18);
+  border-radius:14px;
+  padding:12px 14px;
+  margin:0 0 12px;
+}
+.order-reference .or-label{
+  display:block;
+  font-size:0.66rem;
   font-weight:800;
+  letter-spacing:0.14em;
   color:var(--primary-dark);
+  margin-bottom:6px;
+}
+.order-reference .or-row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:8px 10px;
+}
+.order-reference .or-id{
+  font-size:1.2rem;
+  font-weight:800;
+  letter-spacing:0.04em;
+  color:var(--primary);
+  overflow-wrap:anywhere;
+}
+.copy-id-btn{
+  background:#fff;
+  color:var(--primary);
+  border:1.5px solid var(--primary);
+  border-radius:999px;
+  padding:7px 14px;
+  min-height:34px;
+  font-size:0.74rem;
+  font-weight:700;
+  transition:background var(--transition), color var(--transition), transform 0.15s ease;
+}
+.copy-id-btn:hover{background:var(--secondary);}
+.copy-id-btn:active{transform:scale(0.95);}
+.copy-id-btn.copied{
+  background:var(--primary);
+  color:#fff;
+}
+.ty-next{
+  background:var(--bg);
+  border:1px solid var(--secondary);
+  border-radius:14px;
+  padding:12px 14px;
+  margin:0 0 12px;
+  text-align:left;
+}
+.ty-next .ty-next-title{
+  font-size:0.88rem;
+  font-weight:800;
+  color:var(--dark);
+  margin-bottom:4px;
+}
+.ty-next p{
+  margin:0;
+  color:#666;
+  font-size:0.8rem;
+  line-height:1.5;
+}
+.thankyou-box .ty-brand{
+  color:var(--primary-dark);
+  font-size:0.8rem;
+  font-weight:600;
+  line-height:1.45;
+  margin:0 0 16px;
 }
 .thankyou-close{
   width:100%;
+  min-height:48px;
   background:var(--primary);
   color:#fff;
-  padding:12px;
-  border-radius:10px;
+  padding:13px;
+  border-radius:12px;
+  font-size:0.95rem;
   font-weight:700;
+  box-shadow:0 8px 18px rgba(255,0,78,0.28);
+  transition:background var(--transition), transform 0.15s ease, box-shadow var(--transition);
 }
+.thankyou-close:hover{background:var(--primary-dark);}
+.thankyou-close:active{transform:scale(0.98);}
+
+/* Compact popup on small / short phones so Continue Shopping stays reachable */
+@media (max-width:359px), (max-height:640px){
+  .thankyou-box{padding:18px 16px 16px;}
+  .thankyou-icon{width:52px;height:52px;margin-bottom:10px;}
+  .thankyou-icon svg{width:26px;height:26px;}
+  .thankyou-box h3{font-size:1.2rem;margin-bottom:6px;}
+  .thankyou-box .ty-lead{font-size:0.88rem;margin-bottom:4px;}
+  .thankyou-box .ty-sub{font-size:0.78rem;line-height:1.45;margin-bottom:10px;}
+  .order-reference{padding:9px 12px;margin-bottom:10px;}
+  .order-reference .or-label{margin-bottom:4px;}
+  .order-reference .or-id{font-size:1.05rem;}
+  .ty-next{padding:9px 12px;margin-bottom:10px;}
+  .ty-next p{font-size:0.76rem;line-height:1.4;}
+  .thankyou-box .ty-brand{font-size:0.74rem;margin-bottom:12px;}
+  .thankyou-close{min-height:46px;padding:11px;}
+}
+
+/* PHONE / FORM HINT */
+.field-hint{
+  display:block;
+  margin-top:4px;
+  font-size:0.72rem;
+  color:#888;
+}
+.field-hint.invalid{color:#c0392b;}
 
 /* PRODUCT DETAIL MODAL */
 .detail-box{max-width:460px;}
@@ -1298,7 +1444,8 @@ textarea:focus-visible{
 
       <div class="form-group">
         <label for="customerPhone">Phone Number *</label>
-        <input type="tel" id="customerPhone" autocomplete="tel" required>
+        <input type="tel" id="customerPhone" autocomplete="tel" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" placeholder="98XXXXXXXX" required>
+        <small class="field-hint" id="phoneHint">Enter a 10-digit phone number</small>
       </div>
 
       <div class="form-group">
@@ -1313,7 +1460,7 @@ textarea:focus-visible{
 
       <p class="error-text" id="orderError"></p>
 
-      <button type="submit" class="submit-order-btn" id="submitOrderBtn">
+      <button type="submit" class="submit-order-btn" id="submitOrderBtn" disabled>
         Place Order
       </button>
 
@@ -1322,32 +1469,39 @@ textarea:focus-visible{
 </div>
 
 <!-- THANK YOU MODAL -->
-<div class="modal" id="thankYouModal">
+<div class="modal thankyou-modal" id="thankYouModal" role="dialog" aria-modal="true" aria-labelledby="thankYouTitle">
   <div class="modal-box thankyou-box">
 
-    <div class="thankyou-icon">✓</div>
+    <div class="thankyou-icon" aria-hidden="true">
+      <svg viewBox="0 0 36 36" focusable="false">
+        <path class="ty-check" d="M8 19 L15 26 L28 11"/>
+      </svg>
+    </div>
 
-    <h3>Order Received!</h3>
+    <h3 id="thankYouTitle">Order Placed Successfully!</h3>
 
-    <p>
-      Thank you for ordering from Aura Glow Store.
-    </p>
+    <p class="ty-lead">Thank you for choosing Aura Glow Store! 💗</p>
 
-    <p>
-      Your order has been successfully received.
+    <p class="ty-sub">
+      Your order has been received successfully. We're excited to bring your favorite beauty and skincare essentials to you!
     </p>
 
     <div class="order-reference">
-      Order Reference:
-      <br>
-      <span id="thankYouOrderReference">AG-000000</span>
+      <span class="or-label">YOUR ORDER ID</span>
+      <div class="or-row">
+        <span class="or-id" id="thankYouOrderReference">—</span>
+        <button type="button" class="copy-id-btn" id="copyOrderIdBtn" aria-label="Copy order ID">Copy</button>
+      </div>
     </div>
 
-    <p>
-      We will process your order and contact you regarding delivery.
-    </p>
+    <div class="ty-next">
+      <div class="ty-next-title">What's Next? 📦</div>
+      <p>Our team will review your order and contact you shortly to confirm the details and arrange delivery.</p>
+    </div>
 
-    <button class="thankyou-close" id="thankYouCloseBtn">
+    <p class="ty-brand">Thank you for being a part of Aura Glow Store. Glow with confidence! ✨</p>
+
+    <button class="thankyou-close" id="thankYouCloseBtn" type="button">
       Continue Shopping
     </button>
 
@@ -2410,6 +2564,9 @@ function getOrderLines(){
 
 function renderOrderSummary(){
 
+  updatePhoneHint();
+  updateSubmitState();
+
   const lines =
     getOrderLines();
 
@@ -2469,6 +2626,79 @@ document
     "click",
     closeOrderModal
   );
+
+
+/* ==========================================================
+   ORDER FORM VALIDATION
+   - Full name, phone and address are required
+   - Phone must be exactly 10 digits
+   - "Place Order" stays disabled until everything is valid
+   ========================================================== */
+
+let isSubmitting = false;
+
+function isOrderFormValid(){
+
+  const name = document.getElementById("customerName").value.trim();
+  const phone = document.getElementById("customerPhone").value.trim();
+  const address = document.getElementById("customerAddress").value.trim();
+
+  return !!name && /^\d{10}$/.test(phone) && !!address;
+
+}
+
+function updateSubmitState(){
+
+  const btn = document.getElementById("submitOrderBtn");
+
+  if(btn){
+    btn.disabled = isSubmitting || !isOrderFormValid();
+  }
+
+}
+
+function updatePhoneHint(){
+
+  const phone = document.getElementById("customerPhone").value;
+  const hint = document.getElementById("phoneHint");
+
+  if(phone.length === 0){
+    hint.textContent = "Enter a 10-digit phone number";
+    hint.classList.remove("invalid");
+  }else if(phone.length < 10){
+    hint.textContent = "Phone number must be exactly 10 digits (" + phone.length + "/10)";
+    hint.classList.add("invalid");
+  }else{
+    hint.textContent = "10-digit phone number ✓";
+    hint.classList.remove("invalid");
+  }
+
+}
+
+/* Only digits, max 10 */
+document.getElementById("customerPhone").addEventListener("input", function(){
+
+  const cleaned = this.value.replace(/\D/g, "").slice(0, 10);
+
+  if(this.value !== cleaned){
+    this.value = cleaned;
+  }
+
+  updatePhoneHint();
+  updateSubmitState();
+
+});
+
+["customerName","customerAddress"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", updateSubmitState);
+  el.addEventListener("change", updateSubmitState);
+});
+
+document.getElementById("customerPhone").addEventListener("change", () => {
+  updatePhoneHint();
+  updateSubmitState();
+});
 
 
 /* ==========================================================
@@ -2802,12 +3032,33 @@ function showThankYou(orderReference){
   thankYouOrderReference.textContent =
     orderReference;
 
+  const copyBtn = document.getElementById("copyOrderIdBtn");
+  copyBtn.textContent = "Copy";
+  copyBtn.classList.remove("copied");
+
   thankYouModal.classList.add(
+    "show"
+  );
+
+  setTimeout(() => {
+    try{
+      document.getElementById("thankYouCloseBtn").focus({ preventScroll:true });
+    }catch(e){}
+  }, 50);
+
+}
+
+
+function closeThankYou(){
+
+  thankYouModal.classList.remove(
     "show"
   );
 
 }
 
+
+/* Continue Shopping: close the popup and go back to the products */
 
 document
   .getElementById("thankYouCloseBtn")
@@ -2815,9 +3066,75 @@ document
     "click",
     () => {
 
-      thankYouModal.classList.remove(
-        "show"
-      );
+      closeThankYou();
+
+      const shop = document.getElementById("shop");
+
+      if(shop){
+        shop.scrollIntoView({ behavior:"smooth", block:"start" });
+      }
+
+    }
+  );
+
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && thankYouModal.classList.contains("show")){
+    closeThankYou();
+  }
+});
+
+
+/* Copy the real order ID shown in the popup */
+
+async function copyTextToClipboard(text){
+
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(err){ /* fall back below */ }
+
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }catch(err){
+    return false;
+  }
+
+}
+
+document
+  .getElementById("copyOrderIdBtn")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const btn = document.getElementById("copyOrderIdBtn");
+      const id = thankYouOrderReference.textContent.trim();
+
+      if(!id || id === "—") return;
+
+      const ok = await copyTextToClipboard(id);
+
+      btn.textContent = ok ? "Copied ✓" : "Copy failed";
+      btn.classList.toggle("copied", ok);
+
+      setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1800);
 
     }
   );
@@ -2891,6 +3208,9 @@ document
 
       e.preventDefault();
 
+      /* Prevent duplicate submissions */
+      if(isSubmitting) return;
+
 
       const name =
         document
@@ -2926,6 +3246,18 @@ document
 
         orderError.textContent =
           "Please fill in your name, phone number and address.";
+
+        orderError.style.display =
+          "block";
+
+        return;
+
+      }
+
+      if(!/^\d{10}$/.test(phone)){
+
+        orderError.textContent =
+          "Please enter a valid 10-digit phone number.";
 
         orderError.style.display =
           "block";
@@ -3009,6 +3341,8 @@ document
         document.getElementById(
           "submitOrderBtn"
         );
+
+      isSubmitting = true;
 
       submitBtn.disabled = true;
 
@@ -3130,10 +3464,14 @@ document
 
       }finally{
 
-        submitBtn.disabled = false;
+        isSubmitting = false;
 
         submitBtn.textContent =
           "Place Order";
+
+        updatePhoneHint();
+
+        updateSubmitState();
 
       }
 
