@@ -788,6 +788,45 @@ document.getElementById("clearOrderFilterBtn").addEventListener("click", ()=>{
   todayOrdersFilter = false;
   renderOrders(document.getElementById("orderSearch").value);
 });
+document.getElementById("clearOrderFilterBtn").addEventListener("click", ()=>{
+  orderStatusFilter = null;
+  todayOrdersFilter = false;
+  renderOrders(document.getElementById("orderSearch").value);
+});
+
+/* ==========================================================
+   INSTANT NEW ORDER REALTIME ALERT & SOUND
+   ========================================================== */
+function playOrderAlertSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch(e) {
+    console.log("Audio play error:", e);
+  }
+}
+
+supabaseClient
+  .channel('public:orders')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+    console.log('New order received:', payload.new);
+    playOrderAlertSound();
+    showToast(`🔔 नयाँ अर्डर आयो! (#${payload.new.id} - Rs. ${payload.new.total})`, 'success');
+    loadEverything();
+  })
+  .subscribe();
+
 </script>
 </body>
 </html>
