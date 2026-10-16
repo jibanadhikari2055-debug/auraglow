@@ -138,6 +138,22 @@ main{padding:16px;flex:1;}
   main{padding:12px;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
 }
+
+/* SQUARE IMAGE CROPPER */
+.crop-overlay{position:fixed;inset:0;background:rgba(20,10,15,.72);z-index:4000;display:none;align-items:center;justify-content:center;padding:16px}
+.crop-overlay.show{display:flex}
+.crop-card{width:min(100%,430px);background:#fff;border-radius:16px;padding:20px;box-shadow:0 20px 60px #0003}
+.crop-card h3{color:var(--primary-dark);margin:0 0 6px}
+.crop-card p{font-size:.82rem;color:#777;margin-bottom:12px}
+.crop-stage{width:min(100%,340px);aspect-ratio:1/1;margin:0 auto;background:#f4edf0;overflow:hidden;border-radius:10px;touch-action:none;cursor:grab}
+#cropCanvas{width:100%;height:100%;display:block}
+.crop-controls{margin-top:14px}
+.crop-controls label{font-size:.82rem;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+.crop-controls input{width:100%;accent-color:var(--primary-dark);margin-top:8px}
+.crop-actions{display:flex;gap:10px;margin-top:16px}
+.crop-actions button{flex:1}
+.crop-help{font-size:.74rem;color:#888;text-align:center;margin-top:8px}
+
 </style>
 </head>
 <body>
@@ -316,6 +332,25 @@ main{padding:16px;flex:1;}
       <button type="button" class="btn btn-outline" id="confirmCancelBtn">Cancel</button>
       <button type="button" class="btn btn-primary" id="confirmYesBtn" style="background:var(--red);">Delete</button>
     </div>
+  </div>
+</div>
+
+
+<!-- SQUARE CROP EDITOR -->
+<div class="crop-overlay" id="cropOverlay" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+  <div class="crop-card">
+    <h3 id="cropTitle">Adjust product photo</h3>
+    <p>1:1 square crop · Drag the photo to reposition it.</p>
+    <div class="crop-stage" id="cropStage"><canvas id="cropCanvas" width="340" height="340"></canvas></div>
+    <div class="crop-controls">
+      <label for="cropZoom"><span>Zoom</span><span id="cropZoomValue">100%</span></label>
+      <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1">
+    </div>
+    <div class="crop-actions">
+      <button type="button" class="btn btn-outline" id="cropCancelBtn">Cancel</button>
+      <button type="button" class="btn btn-primary" id="cropApplyBtn">Crop & Optimize</button>
+    </div>
+    <div class="crop-help">Image will be converted to WebP and compressed automatically (target: 50–200 KB).</div>
   </div>
 </div>
 
@@ -563,40 +598,160 @@ function updateImagePreviews(){
   });
 }
 
-// Resize/compress photos before saving so the database does not receive huge originals.
-function readAndCompressImage(file){
+// Crop every selected photo to a square, then resize and compress to WebP.
+const cropOverlay = document.getElementById("cropOverlay");
+const cropCanvas = document.getElementById("cropCanvas");
+const cropCtx = cropCanvas.getContext("2d");
+const cropStage = document.getElementById("cropStage");
+const cropZoom = document.getElementById("cropZoom");
+const cropZoomValue = document.getElementById("cropZoomValue");
+let cropImage = null;
+let cropInputIndex = -1;
+let cropScale = 1;
+let cropOffsetX = 0;
+let cropOffsetY = 0;
+let cropBaseScale = 1;
+let cropDragging = false;
+let cropLastX = 0;
+let cropLastY = 0;
+let cropResolve = null;
+let cropReject = null;
+
+function drawCropPreview(){
+  if(!cropImage) return;
+  const size = cropCanvas.width;
+  const scale = cropBaseScale * cropScale;
+  const w = cropImage.naturalWidth * scale;
+  const h = cropImage.naturalHeight * scale;
+  const minX = size - w, minY = size - h;
+  cropOffsetX = Math.min(0, Math.max(minX, cropOffsetX));
+  cropOffsetY = Math.min(0, Math.max(minY, cropOffsetY));
+  cropCtx.clearRect(0,0,size,size);
+  cropCtx.fillStyle = "#f4edf0";
+  cropCtx.fillRect(0,0,size,size);
+  cropCtx.drawImage(cropImage,cropOffsetX,cropOffsetY,w,h);
+  cropZoomValue.textContent = Math.round(cropScale*100) + "%";
+}
+function openCropper(file, index){
   return new Promise((resolve,reject)=>{
-    if(!file || !file.type.startsWith("image/")) return reject(new Error("Please choose an image file."));
-    const reader = new FileReader();
-    reader.onerror = ()=>reject(new Error("Could not read this photo."));
-    reader.onload = ()=>{
-      const img = new Image();
-      img.onerror = ()=>reject(new Error("This image could not be opened."));
-      img.onload = ()=>{
-        const maxSide = 1200;
-        const scale = Math.min(1, maxSide / Math.max(img.width,img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1,Math.round(img.width*scale));
-        canvas.height = Math.max(1,Math.round(img.height*scale));
-        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
-        resolve(canvas.toDataURL("image/jpeg",0.82));
-      };
-      img.src = reader.result;
+    cropInputIndex = index;
+    cropResolve = resolve;
+    cropReject = reject;
+    const image = new Image();
+    image.onload = ()=>{
+      cropImage = image;
+      cropScale = 1;
+      cropZoom.value = "1";
+      cropBaseScale = cropCanvas.width / Math.min(image.naturalWidth,image.naturalHeight);
+      const w = image.naturalWidth * cropBaseScale;
+      const h = image.naturalHeight * cropBaseScale;
+      cropOffsetX = (cropCanvas.width-w)/2;
+      cropOffsetY = (cropCanvas.height-h)/2;
+      cropOverlay.classList.add("show");
+      drawCropPreview();
     };
-    reader.readAsDataURL(file);
+    image.onerror = ()=>reject(new Error("This image could not be opened."));
+    image.src = URL.createObjectURL(file);
   });
 }
+cropZoom.addEventListener("input",()=>{
+  if(!cropImage) return;
+  const oldScale = cropBaseScale * cropScale;
+  const centerX = (cropCanvas.width/2 - cropOffsetX)/oldScale;
+  const centerY = (cropCanvas.height/2 - cropOffsetY)/oldScale;
+  cropScale = Number(cropZoom.value);
+  const nextScale = cropBaseScale * cropScale;
+  cropOffsetX = cropCanvas.width/2 - centerX*nextScale;
+  cropOffsetY = cropCanvas.height/2 - centerY*nextScale;
+  drawCropPreview();
+});
+cropStage.addEventListener("pointerdown",e=>{
+  if(!cropImage) return;
+  cropDragging = true;
+  cropLastX = e.clientX;
+  cropLastY = e.clientY;
+  cropStage.setPointerCapture(e.pointerId);
+  cropStage.style.cursor = "grabbing";
+});
+cropStage.addEventListener("pointermove",e=>{
+  if(!cropDragging) return;
+  const rect = cropCanvas.getBoundingClientRect();
+  cropOffsetX += (e.clientX-cropLastX)*cropCanvas.width/rect.width;
+  cropOffsetY += (e.clientY-cropLastY)*cropCanvas.height/rect.height;
+  cropLastX = e.clientX;
+  cropLastY = e.clientY;
+  drawCropPreview();
+});
+function stopCropDrag(){cropDragging=false;cropStage.style.cursor="grab";}
+cropStage.addEventListener("pointerup",stopCropDrag);
+cropStage.addEventListener("pointercancel",stopCropDrag);
 
+function canvasToWebP(canvas, quality){
+  return new Promise((resolve,reject)=>canvas.toBlob(blob=>{
+    if(blob) resolve(blob); else reject(new Error("WebP conversion failed in this browser."));
+  },"image/webp",quality));
+}
+async function cropAndCompressWebP(){
+  // Export a crisp square image, adjusting quality and dimensions to stay near/below 200 KB.
+  let dimension = 800;
+  let output, quality;
+  for(let sizePass=0; sizePass<3; sizePass++){
+    const outCanvas = document.createElement("canvas");
+    outCanvas.width = dimension;
+    outCanvas.height = dimension;
+    outCanvas.getContext("2d").drawImage(cropCanvas,0,0,cropCanvas.width,cropCanvas.height,0,0,dimension,dimension);
+    for(quality=.88; quality>=.38; quality-=.08){
+      output = await canvasToWebP(outCanvas,quality);
+      if(output.size <= 200*1024) break;
+    }
+    if(output.size <= 200*1024) break;
+    dimension = Math.round(dimension*.8);
+  }
+  if(!output) throw new Error("Could not compress this image.");
+  return await new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(new Error("Could not finish processing this photo."));
+    reader.readAsDataURL(output);
+  });
+}
+document.getElementById("cropApplyBtn").addEventListener("click",async()=>{
+  const btn=document.getElementById("cropApplyBtn");
+  if(!cropImage || !cropResolve) return;
+  btn.disabled=true; btn.textContent="Optimizing…";
+  try{
+    const data=await cropAndCompressWebP();
+    const sizeKB=Math.round((data.length*3/4)/1024);
+    const resolve=cropResolve;
+    closeCropper();
+    selectedImageData[cropInputIndex]=data;
+    updateImagePreviews();
+    showToast("Photo cropped and converted to WebP ("+sizeKB+" KB).","success");
+    resolve(data);
+  }catch(err){
+    showToast(err.message || "Could not optimize photo.","error");
+  }finally{
+    btn.disabled=false; btn.textContent="Crop & Optimize";
+  }
+});
+function closeCropper(){
+  cropOverlay.classList.remove("show");
+  cropImage=null; cropResolve=null; cropReject=null;
+}
+document.getElementById("cropCancelBtn").addEventListener("click",()=>{
+  const reject=cropReject;
+  closeCropper();
+  if(reject) reject(new Error("Photo selection cancelled."));
+});
 imageInputs.forEach((id,index)=>{
   document.getElementById(id).addEventListener("change", async event=>{
-    const file = event.target.files && event.target.files[0];
+    const file=event.target.files && event.target.files[0];
     if(!file) return;
     try{
-      selectedImageData[index] = await readAndCompressImage(file);
-      updateImagePreviews();
+      await openCropper(file,index);
     }catch(err){
-      event.target.value = "";
-      showToast(err.message || "Could not load photo.", "error");
+      event.target.value="";
+      if(err.message !== "Photo selection cancelled.") showToast(err.message || "Could not load photo.","error");
     }
   });
 });
