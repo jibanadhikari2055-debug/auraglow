@@ -6,7 +6,7 @@
 <title>Aura Glow Store | Admin Panel</title>
 
 <!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2';"></script>
 
 <style>
 :root{
@@ -266,24 +266,25 @@ main{padding:16px;flex:1;}
       </div>
 
       <div class="field">
-        <label for="pImage1">Main Image URL *</label>
-        <input type="url" id="pImage1" required>
+        <label for="pImage1">Main Product Photo *</label>
+        <input type="file" id="pImage1" accept="image/*" capture="environment">
+        <small style="color:#888;">Choose a photo directly from your device. No image-hosting link needed.</small>
       </div>
       <div class="field">
-        <label for="pImage2">Additional Image 2 URL</label>
-        <input type="url" id="pImage2">
+        <label for="pImage2">Additional Photo 2</label>
+        <input type="file" id="pImage2" accept="image/*">
       </div>
       <div class="field">
-        <label for="pImage3">Additional Image 3 URL</label>
-        <input type="url" id="pImage3">
+        <label for="pImage3">Additional Photo 3</label>
+        <input type="file" id="pImage3" accept="image/*">
       </div>
       <div class="field">
-        <label for="pImage4">Additional Image 4 URL</label>
-        <input type="url" id="pImage4">
+        <label for="pImage4">Additional Photo 4</label>
+        <input type="file" id="pImage4" accept="image/*">
       </div>
       <div class="field">
-        <label for="pImage5">Additional Image 5 URL</label>
-        <input type="url" id="pImage5">
+        <label for="pImage5">Additional Photo 5</label>
+        <input type="file" id="pImage5" accept="image/*">
       </div>
       <div class="img-preview-row" id="imgPreviewRow"></div>
 
@@ -328,7 +329,9 @@ main{padding:16px;flex:1;}
    ========================================================== */
 const SUPABASE_URL = "https://tmdlhfkggxjexfaumsuq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_TzeEZkbH1FeNLpSGGafX7g_bMA3GH_F";
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
 const STATUS_OPTIONS = ["Pending","Confirmed","Processing","Shipped","Delivered","Cancelled"];
 
@@ -369,6 +372,11 @@ const loginBtn = document.getElementById("loginBtn");
 
 document.getElementById("loginForm").addEventListener("submit", async function(e){
   e.preventDefault();
+  if(!supabaseClient){
+    loginError.textContent = "Login library could not load. Check your internet connection, refresh the page, and try again.";
+    loginError.style.display = "block";
+    return;
+  }
   loginError.style.display = "none";
   loginBtn.disabled = true;
   loginBtn.textContent = "Logging in…";
@@ -376,31 +384,64 @@ document.getElementById("loginForm").addEventListener("submit", async function(e
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
 
+  let loginTimeoutId;
   try{
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    // Do not leave the login button spinning forever if the network/auth request hangs.
+    const loginResult = await Promise.race([
+      supabaseClient.auth.signInWithPassword({ email, password }),
+      new Promise((_, reject) => {
+        loginTimeoutId = setTimeout(() => {
+          const timeoutError = new Error("Login request timed out after 15 seconds.");
+          timeoutError.name = "LoginTimeoutError";
+          reject(timeoutError);
+        }, 15000);
+      })
+    ]);
+    clearTimeout(loginTimeoutId);
+    const { data, error } = loginResult;
 
     if(error){
       console.error("[Aura Glow Admin] Login error:", error);
-      loginError.textContent = "Login failed: " + error.message;
+      const msg = (error.message || "").toLowerCase();
+      if(msg.includes("invalid login credentials")){
+        loginError.textContent = "Email or password is incorrect. Check the email/password in Supabase Authentication > Users.";
+      }else if(msg.includes("email not confirmed")){
+        loginError.textContent = "This email is not confirmed yet. Confirm the user in Supabase Authentication first.";
+      }else if(msg.includes("fetch") || msg.includes("network")){
+        loginError.textContent = "Could not connect to Supabase. Check your internet connection and Supabase project settings.";
+      }else{
+        loginError.textContent = "Login failed: " + (error.message || "Unknown error");
+      }
       loginError.style.display = "block";
       return;
     }
 
+    if(!data || !data.session){
+      loginError.textContent = "Login did not create a session. Check the Supabase Authentication user and project settings.";
+      loginError.style.display = "block";
+      return;
+    }
     showApp();
 
   }catch(err){
     console.error("[Aura Glow Admin] Unexpected login error:", err);
-    loginError.textContent = "Login failed: " + ((err && err.message) ? err.message : "Connection error. Please check your internet connection and try again.");
+    if(loginTimeoutId) clearTimeout(loginTimeoutId);
+    if(err && err.name === "LoginTimeoutError"){
+      loginError.textContent = "Login is taking too long. Check your internet connection, confirm the Supabase project is active, and make sure this project's URL and publishable key match your store website. Then refresh and try again.";
+    }else{
+      loginError.textContent = "Could not log in: " + ((err && err.message) ? err.message : "Connection error. Check your internet and try again.");
+    }
     loginError.style.display = "block";
 
   }finally{
+    if(loginTimeoutId) clearTimeout(loginTimeoutId);
     loginBtn.disabled = false;
     loginBtn.textContent = "Log In";
   }
 });
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
-  await supabaseClient.auth.signOut();
+  if(supabaseClient) await supabaseClient.auth.signOut();
   appShell.style.display = "none";
   loginScreen.style.display = "flex";
 });
@@ -413,9 +454,12 @@ function showApp(){
 
 /* Auto-login if a session already exists */
 (async function checkSession(){
-  const { data } = await supabaseClient.auth.getSession();
-  if(data && data.session){
-    showApp();
+  if(!supabaseClient) return;
+  try{
+    const { data } = await supabaseClient.auth.getSession();
+    if(data && data.session) showApp();
+  }catch(err){
+    console.error("[Aura Glow Admin] Session check failed:", err);
   }
 })();
 
@@ -502,25 +546,64 @@ function renderProducts(){
 const productModal = document.getElementById("productModal");
 const productForm = document.getElementById("productForm");
 const imageInputs = ["pImage1","pImage2","pImage3","pImage4","pImage5"];
+let selectedImageData = ["","","","",""];
 
 function updateImagePreviews(){
   const row = document.getElementById("imgPreviewRow");
   row.innerHTML = "";
-  imageInputs.forEach(id=>{
-    const val = document.getElementById(id).value.trim();
+  selectedImageData.forEach((val,i)=>{
     if(val){
       const img = document.createElement("img");
       img.src = val;
       img.className = "img-preview";
-      img.alt = "Preview";
+      img.alt = "Selected product photo " + (i+1);
+      img.title = i === 0 ? "Main photo" : "Additional photo " + (i+1);
       row.appendChild(img);
     }
   });
 }
-imageInputs.forEach(id=>document.getElementById(id).addEventListener("input", updateImagePreviews));
+
+// Resize/compress photos before saving so the database does not receive huge originals.
+function readAndCompressImage(file){
+  return new Promise((resolve,reject)=>{
+    if(!file || !file.type.startsWith("image/")) return reject(new Error("Please choose an image file."));
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error("Could not read this photo."));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=>reject(new Error("This image could not be opened."));
+      img.onload = ()=>{
+        const maxSide = 1200;
+        const scale = Math.min(1, maxSide / Math.max(img.width,img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1,Math.round(img.width*scale));
+        canvas.height = Math.max(1,Math.round(img.height*scale));
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL("image/jpeg",0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+imageInputs.forEach((id,index)=>{
+  document.getElementById(id).addEventListener("change", async event=>{
+    const file = event.target.files && event.target.files[0];
+    if(!file) return;
+    try{
+      selectedImageData[index] = await readAndCompressImage(file);
+      updateImagePreviews();
+    }catch(err){
+      event.target.value = "";
+      showToast(err.message || "Could not load photo.", "error");
+    }
+  });
+});
 
 function openProductForm(id){
   productForm.reset();
+  selectedImageData = ["","","","",""];
   document.getElementById("imgPreviewRow").innerHTML = "";
   document.getElementById("productId").value = "";
 
@@ -537,7 +620,7 @@ function openProductForm(id){
     document.getElementById("pDescription").value = p.description || "";
     document.getElementById("pStock").checked = p.stock !== false;
     const imgs = Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : [p.image_url].filter(Boolean);
-    imageInputs.forEach((inputId,i)=>{ document.getElementById(inputId).value = imgs[i] || ""; });
+    selectedImageData = imageInputs.map((_,i)=>imgs[i] || "");
   }else{
     document.getElementById("productModalTitle").textContent = "Add Product";
     document.getElementById("pStock").checked = true;
@@ -556,8 +639,15 @@ productForm.addEventListener("submit", async function(e){
   saveBtn.disabled = true;
   saveBtn.textContent = "Saving…";
 
-  const images = imageInputs.map(id=>document.getElementById(id).value.trim()).filter(Boolean);
-  const mainImage = images[0] || "";
+  const id = document.getElementById("productId").value;
+  const images = selectedImageData.filter(Boolean);
+  if(!selectedImageData[0]){
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Product";
+    showToast(id ? "Please keep or choose a main product photo." : "Please choose a main product photo.", "error");
+    return;
+  }
+  const mainImage = selectedImageData[0];
 
   const payload = {
     name: document.getElementById("pName").value.trim(),
@@ -571,7 +661,6 @@ productForm.addEventListener("submit", async function(e){
     stock: document.getElementById("pStock").checked
   };
 
-  const id = document.getElementById("productId").value;
   let error;
 
   if(id){
