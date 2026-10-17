@@ -6,7 +6,7 @@
 <title>Aura Glow Store | Admin Panel</title>
 
 <!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2';"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
@@ -138,22 +138,6 @@ main{padding:16px;flex:1;}
   main{padding:12px;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
 }
-
-/* SQUARE IMAGE CROPPER */
-.crop-overlay{position:fixed;inset:0;background:rgba(20,10,15,.72);z-index:4000;display:none;align-items:center;justify-content:center;padding:16px}
-.crop-overlay.show{display:flex}
-.crop-card{width:min(100%,430px);background:#fff;border-radius:16px;padding:20px;box-shadow:0 20px 60px #0003}
-.crop-card h3{color:var(--primary-dark);margin:0 0 6px}
-.crop-card p{font-size:.82rem;color:#777;margin-bottom:12px}
-.crop-stage{width:min(100%,340px);aspect-ratio:1/1;margin:0 auto;background:#f4edf0;overflow:hidden;border-radius:10px;touch-action:none;cursor:grab}
-#cropCanvas{width:100%;height:100%;display:block}
-.crop-controls{margin-top:14px}
-.crop-controls label{font-size:.82rem;font-weight:700;display:flex;justify-content:space-between;gap:10px}
-.crop-controls input{width:100%;accent-color:var(--primary-dark);margin-top:8px}
-.crop-actions{display:flex;gap:10px;margin-top:16px}
-.crop-actions button{flex:1}
-.crop-help{font-size:.74rem;color:#888;text-align:center;margin-top:8px}
-
 </style>
 </head>
 <body>
@@ -282,25 +266,24 @@ main{padding:16px;flex:1;}
       </div>
 
       <div class="field">
-        <label for="pImage1">Main Product Photo *</label>
-        <input type="file" id="pImage1" accept="image/*">
-        <small style="color:#888;">Choose a photo from your gallery or device. No image-hosting link needed.</small>
+        <label for="pImage1">Main Image URL *</label>
+        <input type="url" id="pImage1" required>
       </div>
       <div class="field">
-        <label for="pImage2">Additional Photo 2</label>
-        <input type="file" id="pImage2" accept="image/*">
+        <label for="pImage2">Additional Image 2 URL</label>
+        <input type="url" id="pImage2">
       </div>
       <div class="field">
-        <label for="pImage3">Additional Photo 3</label>
-        <input type="file" id="pImage3" accept="image/*">
+        <label for="pImage3">Additional Image 3 URL</label>
+        <input type="url" id="pImage3">
       </div>
       <div class="field">
-        <label for="pImage4">Additional Photo 4</label>
-        <input type="file" id="pImage4" accept="image/*">
+        <label for="pImage4">Additional Image 4 URL</label>
+        <input type="url" id="pImage4">
       </div>
       <div class="field">
-        <label for="pImage5">Additional Photo 5</label>
-        <input type="file" id="pImage5" accept="image/*">
+        <label for="pImage5">Additional Image 5 URL</label>
+        <input type="url" id="pImage5">
       </div>
       <div class="img-preview-row" id="imgPreviewRow"></div>
 
@@ -335,25 +318,6 @@ main{padding:16px;flex:1;}
   </div>
 </div>
 
-
-<!-- SQUARE CROP EDITOR -->
-<div class="crop-overlay" id="cropOverlay" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
-  <div class="crop-card">
-    <h3 id="cropTitle">Adjust product photo</h3>
-    <p>1:1 square crop · Drag the photo to reposition it.</p>
-    <div class="crop-stage" id="cropStage"><canvas id="cropCanvas" width="340" height="340"></canvas></div>
-    <div class="crop-controls">
-      <label for="cropZoom"><span>Zoom</span><span id="cropZoomValue">100%</span></label>
-      <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1">
-    </div>
-    <div class="crop-actions">
-      <button type="button" class="btn btn-outline" id="cropCancelBtn">Cancel</button>
-      <button type="button" class="btn btn-primary" id="cropApplyBtn">Crop & Optimize</button>
-    </div>
-    <div class="crop-help">Image will be converted to WebP and compressed automatically (target: 50–200 KB).</div>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 <script>
@@ -364,9 +328,7 @@ main{padding:16px;flex:1;}
    ========================================================== */
 const SUPABASE_URL = "https://tmdlhfkggxjexfaumsuq.supabase.co";
 const SUPABASE_KEY = "sb_publishable_TzeEZkbH1FeNLpSGGafX7g_bMA3GH_F";
-const supabaseClient = (window.supabase && window.supabase.createClient)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const STATUS_OPTIONS = ["Pending","Confirmed","Processing","Shipped","Delivered","Cancelled"];
 
@@ -407,11 +369,6 @@ const loginBtn = document.getElementById("loginBtn");
 
 document.getElementById("loginForm").addEventListener("submit", async function(e){
   e.preventDefault();
-  if(!supabaseClient){
-    loginError.textContent = "Login library could not load. Check your internet connection, refresh the page, and try again.";
-    loginError.style.display = "block";
-    return;
-  }
   loginError.style.display = "none";
   loginBtn.disabled = true;
   loginBtn.textContent = "Logging in…";
@@ -419,64 +376,31 @@ document.getElementById("loginForm").addEventListener("submit", async function(e
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
 
-  let loginTimeoutId;
   try{
-    // Do not leave the login button spinning forever if the network/auth request hangs.
-    const loginResult = await Promise.race([
-      supabaseClient.auth.signInWithPassword({ email, password }),
-      new Promise((_, reject) => {
-        loginTimeoutId = setTimeout(() => {
-          const timeoutError = new Error("Login request timed out after 15 seconds.");
-          timeoutError.name = "LoginTimeoutError";
-          reject(timeoutError);
-        }, 15000);
-      })
-    ]);
-    clearTimeout(loginTimeoutId);
-    const { data, error } = loginResult;
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
     if(error){
       console.error("[Aura Glow Admin] Login error:", error);
-      const msg = (error.message || "").toLowerCase();
-      if(msg.includes("invalid login credentials")){
-        loginError.textContent = "Email or password is incorrect. Check the email/password in Supabase Authentication > Users.";
-      }else if(msg.includes("email not confirmed")){
-        loginError.textContent = "This email is not confirmed yet. Confirm the user in Supabase Authentication first.";
-      }else if(msg.includes("fetch") || msg.includes("network")){
-        loginError.textContent = "Could not connect to Supabase. Check your internet connection and Supabase project settings.";
-      }else{
-        loginError.textContent = "Login failed: " + (error.message || "Unknown error");
-      }
+      loginError.textContent = "Login failed: " + error.message;
       loginError.style.display = "block";
       return;
     }
 
-    if(!data || !data.session){
-      loginError.textContent = "Login did not create a session. Check the Supabase Authentication user and project settings.";
-      loginError.style.display = "block";
-      return;
-    }
     showApp();
 
   }catch(err){
     console.error("[Aura Glow Admin] Unexpected login error:", err);
-    if(loginTimeoutId) clearTimeout(loginTimeoutId);
-    if(err && err.name === "LoginTimeoutError"){
-      loginError.textContent = "Login is taking too long. Check your internet connection, confirm the Supabase project is active, and make sure this project's URL and publishable key match your store website. Then refresh and try again.";
-    }else{
-      loginError.textContent = "Could not log in: " + ((err && err.message) ? err.message : "Connection error. Check your internet and try again.");
-    }
+    loginError.textContent = "Login failed: " + ((err && err.message) ? err.message : "Connection error. Please check your internet connection and try again.");
     loginError.style.display = "block";
 
   }finally{
-    if(loginTimeoutId) clearTimeout(loginTimeoutId);
     loginBtn.disabled = false;
     loginBtn.textContent = "Log In";
   }
 });
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
-  if(supabaseClient) await supabaseClient.auth.signOut();
+  await supabaseClient.auth.signOut();
   appShell.style.display = "none";
   loginScreen.style.display = "flex";
 });
@@ -489,12 +413,9 @@ function showApp(){
 
 /* Auto-login if a session already exists */
 (async function checkSession(){
-  if(!supabaseClient) return;
-  try{
-    const { data } = await supabaseClient.auth.getSession();
-    if(data && data.session) showApp();
-  }catch(err){
-    console.error("[Aura Glow Admin] Session check failed:", err);
+  const { data } = await supabaseClient.auth.getSession();
+  if(data && data.session){
+    showApp();
   }
 })();
 
@@ -581,184 +502,25 @@ function renderProducts(){
 const productModal = document.getElementById("productModal");
 const productForm = document.getElementById("productForm");
 const imageInputs = ["pImage1","pImage2","pImage3","pImage4","pImage5"];
-let selectedImageData = ["","","","",""];
 
 function updateImagePreviews(){
   const row = document.getElementById("imgPreviewRow");
   row.innerHTML = "";
-  selectedImageData.forEach((val,i)=>{
+  imageInputs.forEach(id=>{
+    const val = document.getElementById(id).value.trim();
     if(val){
       const img = document.createElement("img");
       img.src = val;
       img.className = "img-preview";
-      img.alt = "Selected product photo " + (i+1);
-      img.title = i === 0 ? "Main photo" : "Additional photo " + (i+1);
+      img.alt = "Preview";
       row.appendChild(img);
     }
   });
 }
-
-// Crop every selected photo to a square, then resize and compress to WebP.
-const cropOverlay = document.getElementById("cropOverlay");
-const cropCanvas = document.getElementById("cropCanvas");
-const cropCtx = cropCanvas.getContext("2d");
-const cropStage = document.getElementById("cropStage");
-const cropZoom = document.getElementById("cropZoom");
-const cropZoomValue = document.getElementById("cropZoomValue");
-let cropImage = null;
-let cropInputIndex = -1;
-let cropScale = 1;
-let cropOffsetX = 0;
-let cropOffsetY = 0;
-let cropBaseScale = 1;
-let cropDragging = false;
-let cropLastX = 0;
-let cropLastY = 0;
-let cropResolve = null;
-let cropReject = null;
-
-function drawCropPreview(){
-  if(!cropImage) return;
-  const size = cropCanvas.width;
-  const scale = cropBaseScale * cropScale;
-  const w = cropImage.naturalWidth * scale;
-  const h = cropImage.naturalHeight * scale;
-  const minX = size - w, minY = size - h;
-  cropOffsetX = Math.min(0, Math.max(minX, cropOffsetX));
-  cropOffsetY = Math.min(0, Math.max(minY, cropOffsetY));
-  cropCtx.clearRect(0,0,size,size);
-  cropCtx.fillStyle = "#f4edf0";
-  cropCtx.fillRect(0,0,size,size);
-  cropCtx.drawImage(cropImage,cropOffsetX,cropOffsetY,w,h);
-  cropZoomValue.textContent = Math.round(cropScale*100) + "%";
-}
-function openCropper(file, index){
-  return new Promise((resolve,reject)=>{
-    cropInputIndex = index;
-    cropResolve = resolve;
-    cropReject = reject;
-    const image = new Image();
-    image.onload = ()=>{
-      cropImage = image;
-      cropScale = 1;
-      cropZoom.value = "1";
-      cropBaseScale = cropCanvas.width / Math.min(image.naturalWidth,image.naturalHeight);
-      const w = image.naturalWidth * cropBaseScale;
-      const h = image.naturalHeight * cropBaseScale;
-      cropOffsetX = (cropCanvas.width-w)/2;
-      cropOffsetY = (cropCanvas.height-h)/2;
-      cropOverlay.classList.add("show");
-      drawCropPreview();
-    };
-    image.onerror = ()=>reject(new Error("This image could not be opened."));
-    image.src = URL.createObjectURL(file);
-  });
-}
-cropZoom.addEventListener("input",()=>{
-  if(!cropImage) return;
-  const oldScale = cropBaseScale * cropScale;
-  const centerX = (cropCanvas.width/2 - cropOffsetX)/oldScale;
-  const centerY = (cropCanvas.height/2 - cropOffsetY)/oldScale;
-  cropScale = Number(cropZoom.value);
-  const nextScale = cropBaseScale * cropScale;
-  cropOffsetX = cropCanvas.width/2 - centerX*nextScale;
-  cropOffsetY = cropCanvas.height/2 - centerY*nextScale;
-  drawCropPreview();
-});
-cropStage.addEventListener("pointerdown",e=>{
-  if(!cropImage) return;
-  cropDragging = true;
-  cropLastX = e.clientX;
-  cropLastY = e.clientY;
-  cropStage.setPointerCapture(e.pointerId);
-  cropStage.style.cursor = "grabbing";
-});
-cropStage.addEventListener("pointermove",e=>{
-  if(!cropDragging) return;
-  const rect = cropCanvas.getBoundingClientRect();
-  cropOffsetX += (e.clientX-cropLastX)*cropCanvas.width/rect.width;
-  cropOffsetY += (e.clientY-cropLastY)*cropCanvas.height/rect.height;
-  cropLastX = e.clientX;
-  cropLastY = e.clientY;
-  drawCropPreview();
-});
-function stopCropDrag(){cropDragging=false;cropStage.style.cursor="grab";}
-cropStage.addEventListener("pointerup",stopCropDrag);
-cropStage.addEventListener("pointercancel",stopCropDrag);
-
-function canvasToWebP(canvas, quality){
-  return new Promise((resolve,reject)=>canvas.toBlob(blob=>{
-    if(blob) resolve(blob); else reject(new Error("WebP conversion failed in this browser."));
-  },"image/webp",quality));
-}
-async function cropAndCompressWebP(){
-  // Export a crisp square image, adjusting quality and dimensions to stay near/below 200 KB.
-  let dimension = 800;
-  let output, quality;
-  for(let sizePass=0; sizePass<3; sizePass++){
-    const outCanvas = document.createElement("canvas");
-    outCanvas.width = dimension;
-    outCanvas.height = dimension;
-    outCanvas.getContext("2d").drawImage(cropCanvas,0,0,cropCanvas.width,cropCanvas.height,0,0,dimension,dimension);
-    for(quality=.88; quality>=.38; quality-=.08){
-      output = await canvasToWebP(outCanvas,quality);
-      if(output.size <= 200*1024) break;
-    }
-    if(output.size <= 200*1024) break;
-    dimension = Math.round(dimension*.8);
-  }
-  if(!output) throw new Error("Could not compress this image.");
-  return await new Promise((resolve,reject)=>{
-    const reader = new FileReader();
-    reader.onload=()=>resolve(reader.result);
-    reader.onerror=()=>reject(new Error("Could not finish processing this photo."));
-    reader.readAsDataURL(output);
-  });
-}
-document.getElementById("cropApplyBtn").addEventListener("click",async()=>{
-  const btn=document.getElementById("cropApplyBtn");
-  if(!cropImage || !cropResolve) return;
-  btn.disabled=true; btn.textContent="Optimizing…";
-  try{
-    const data=await cropAndCompressWebP();
-    const sizeKB=Math.round((data.length*3/4)/1024);
-    const resolve=cropResolve;
-    closeCropper();
-    selectedImageData[cropInputIndex]=data;
-    updateImagePreviews();
-    showToast("Photo cropped and converted to WebP ("+sizeKB+" KB).","success");
-    resolve(data);
-  }catch(err){
-    showToast(err.message || "Could not optimize photo.","error");
-  }finally{
-    btn.disabled=false; btn.textContent="Crop & Optimize";
-  }
-});
-function closeCropper(){
-  cropOverlay.classList.remove("show");
-  cropImage=null; cropResolve=null; cropReject=null;
-}
-document.getElementById("cropCancelBtn").addEventListener("click",()=>{
-  const reject=cropReject;
-  closeCropper();
-  if(reject) reject(new Error("Photo selection cancelled."));
-});
-imageInputs.forEach((id,index)=>{
-  document.getElementById(id).addEventListener("change", async event=>{
-    const file=event.target.files && event.target.files[0];
-    if(!file) return;
-    try{
-      await openCropper(file,index);
-    }catch(err){
-      event.target.value="";
-      if(err.message !== "Photo selection cancelled.") showToast(err.message || "Could not load photo.","error");
-    }
-  });
-});
+imageInputs.forEach(id=>document.getElementById(id).addEventListener("input", updateImagePreviews));
 
 function openProductForm(id){
   productForm.reset();
-  selectedImageData = ["","","","",""];
   document.getElementById("imgPreviewRow").innerHTML = "";
   document.getElementById("productId").value = "";
 
@@ -775,7 +537,7 @@ function openProductForm(id){
     document.getElementById("pDescription").value = p.description || "";
     document.getElementById("pStock").checked = p.stock !== false;
     const imgs = Array.isArray(p.image_urls) && p.image_urls.length ? p.image_urls : [p.image_url].filter(Boolean);
-    selectedImageData = imageInputs.map((_,i)=>imgs[i] || "");
+    imageInputs.forEach((inputId,i)=>{ document.getElementById(inputId).value = imgs[i] || ""; });
   }else{
     document.getElementById("productModalTitle").textContent = "Add Product";
     document.getElementById("pStock").checked = true;
@@ -794,15 +556,8 @@ productForm.addEventListener("submit", async function(e){
   saveBtn.disabled = true;
   saveBtn.textContent = "Saving…";
 
-  const id = document.getElementById("productId").value;
-  const images = selectedImageData.filter(Boolean);
-  if(!selectedImageData[0]){
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Save Product";
-    showToast(id ? "Please keep or choose a main product photo." : "Please choose a main product photo.", "error");
-    return;
-  }
-  const mainImage = selectedImageData[0];
+  const images = imageInputs.map(id=>document.getElementById(id).value.trim()).filter(Boolean);
+  const mainImage = images[0] || "";
 
   const payload = {
     name: document.getElementById("pName").value.trim(),
@@ -816,6 +571,7 @@ productForm.addEventListener("submit", async function(e){
     stock: document.getElementById("pStock").checked
   };
 
+  const id = document.getElementById("productId").value;
   let error;
 
   if(id){
@@ -1032,6 +788,45 @@ document.getElementById("clearOrderFilterBtn").addEventListener("click", ()=>{
   todayOrdersFilter = false;
   renderOrders(document.getElementById("orderSearch").value);
 });
+document.getElementById("clearOrderFilterBtn").addEventListener("click", ()=>{
+  orderStatusFilter = null;
+  todayOrdersFilter = false;
+  renderOrders(document.getElementById("orderSearch").value);
+});
+
+/* ==========================================================
+   INSTANT NEW ORDER REALTIME ALERT & SOUND
+   ========================================================== */
+function playOrderAlertSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch(e) {
+    console.log("Audio play error:", e);
+  }
+}
+
+supabaseClient
+  .channel('public:orders')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+    console.log('New order received:', payload.new);
+    playOrderAlertSound();
+    showToast(`🔔 नयाँ अर्डर आयो! (#${payload.new.id} - Rs. ${payload.new.total})`, 'success');
+    loadEverything();
+  })
+  .subscribe();
+
 </script>
 </body>
 </html>
