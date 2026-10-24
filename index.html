@@ -205,19 +205,31 @@ nav.main-nav a:hover{color:var(--primary);}
   color:var(--primary-dark);
   padding:0 16px;
 }
+/* Seamless, continuously looping category slider */
 .category-scroll{
-  display:flex;
-  gap:9px;
-  overflow-x:auto;
-  padding:4px 16px 14px;
-  scroll-snap-type:x proximity;
-  -webkit-overflow-scrolling:touch;
+  overflow:hidden;
+  width:100%;
+  padding:4px 0 14px;
+  -webkit-mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
+  mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
 }
-.category-scroll::-webkit-scrollbar{display:none;}
-.category-scroll{scrollbar-width:none;}
+.category-track{
+  display:flex;
+  width:max-content;
+  gap:9px;
+  padding-left:16px;
+  animation:categoryMarquee 34s linear infinite;
+  will-change:transform;
+}
+.category-scroll:hover .category-track,
+.category-scroll:focus-within .category-track{animation-play-state:paused;}
+.category-scroll:active .category-track{animation-play-state:paused;}
+@keyframes categoryMarquee{
+  from{transform:translateX(0)}
+  to{transform:translateX(-50%)}
+}
 .category-btn{
   flex:0 0 auto;
-  scroll-snap-align:start;
   background:var(--white);
   border:1.5px solid var(--secondary);
   padding:9px 16px;
@@ -225,6 +237,7 @@ nav.main-nav a:hover{color:var(--primary);}
   font-weight:600;
   font-size:0.82rem;
   white-space:nowrap;
+  cursor:pointer;
   transition:all var(--transition), transform 0.15s ease;
 }
 .category-btn:active{transform:scale(0.93);}
@@ -233,6 +246,25 @@ nav.main-nav a:hover{color:var(--primary);}
   border-color:var(--primary);
   color:#fff;
 }
+
+/* Live product search + suggestions */
+.live-search-wrap{max-width:760px;margin:22px auto 8px;padding:0 16px;position:relative;z-index:20;}
+.live-search-box{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #f2cbd7;border-radius:16px;padding:0 15px;min-height:54px;box-shadow:0 8px 24px rgba(255,0,78,.07);transition:border-color .2s,box-shadow .2s;}
+.live-search-box:focus-within{border-color:var(--primary);box-shadow:0 0 0 4px rgba(255,0,78,.09);}
+.live-search-icon{font-size:1.15rem;color:var(--primary);}
+#productSearchInput{width:100%;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:.96rem;color:var(--dark);padding:15px 0;}
+#productSearchClear{display:none;border:0;background:#fff0f4;color:var(--primary);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:1rem;flex:0 0 auto;}
+.search-suggestions{display:none;position:absolute;top:calc(100% + 6px);left:16px;right:16px;background:#fff;border:1px solid #f4d5df;border-radius:14px;box-shadow:0 16px 36px rgba(35,15,22,.14);overflow:hidden;max-height:330px;overflow-y:auto;}
+.search-suggestions.open{display:block;}
+.search-suggestion{display:flex;align-items:center;gap:11px;width:100%;padding:11px 14px;border:0;border-bottom:1px solid #f7edf0;background:#fff;text-align:left;cursor:pointer;color:var(--dark);}
+.search-suggestion:last-child{border-bottom:0;}
+.search-suggestion:hover,.search-suggestion:focus{background:#fff4f7;outline:0;}
+.search-suggestion .suggestion-icon{width:36px;height:36px;border-radius:9px;object-fit:cover;background:#fff4f7;flex:0 0 auto;}
+.search-suggestion .suggestion-name{font-size:.88rem;font-weight:700;line-height:1.3;}
+.search-suggestion .suggestion-meta{font-size:.75rem;color:#777;margin-top:3px;}
+.search-empty{padding:15px;color:#777;font-size:.88rem;}
+.search-match-highlight{outline:2px solid var(--primary);outline-offset:3px;}
+@media(prefers-reduced-motion:reduce){.category-track{animation:none;}}
 
 /* PRODUCTS */
 .products{padding:20px 16px 50px;}
@@ -1291,6 +1323,15 @@ textarea:focus-visible{
   </nav>
 </header>
 
+<section class="live-search-wrap" aria-label="Search products">
+  <div class="live-search-box">
+    <span class="live-search-icon" aria-hidden="true">⌕</span>
+    <input id="productSearchInput" type="search" placeholder="Search products, skincare, serum…" autocomplete="off" aria-label="Search products" aria-controls="searchSuggestions" aria-expanded="false">
+    <button id="productSearchClear" type="button" aria-label="Clear search">✕</button>
+  </div>
+  <div class="search-suggestions" id="searchSuggestions" role="listbox"></div>
+</section>
+
 <section class="hero" id="home">
   <h1>Glow With Confidence</h1>
   <p>
@@ -1301,6 +1342,7 @@ textarea:focus-visible{
     <a href="#shop" class="btn btn-primary">Shop Now</a>
   </div>
 </section>
+
 
 <section class="categories" id="categories">
   <h2>Shop by Category</h2>
@@ -1792,37 +1834,134 @@ function findProduct(id){
    ========================================================== */
 
 function renderCategories(){
-
   const wrap = document.getElementById("categoryScroll");
-
+  if(!wrap) return;
   wrap.innerHTML = "";
 
-  CATEGORIES.forEach(cat => {
+  const track = document.createElement("div");
+  track.className = "category-track";
+  track.setAttribute("aria-label", "Product categories");
 
+  // Duplicate the categories once to create a seamless infinite marquee.
+  [...CATEGORIES, ...CATEGORIES].forEach((cat, index) => {
     const btn = document.createElement("button");
-
-    btn.className =
-      "category-btn" +
-      (cat === activeCategory ? " active" : "");
-
+    const isClone = index >= CATEGORIES.length;
+    btn.type = "button";
+    btn.className = "category-btn" + (cat === activeCategory ? " active" : "");
     btn.textContent = cat;
-
-    btn.setAttribute(
-      "aria-label",
-      "Filter by " + cat
-    );
-
+    btn.setAttribute("aria-label", "Filter by " + cat);
+    if(isClone){
+      btn.setAttribute("aria-hidden", "true");
+      btn.tabIndex = -1;
+    }
     btn.addEventListener("click", () => {
-
       activeCategory = cat;
-
       renderCategories();
       renderProducts();
-
     });
+    track.appendChild(btn);
+  });
+  wrap.appendChild(track);
+}
 
-    wrap.appendChild(btn);
+/* ==========================================================
+   LIVE SEARCH + AUTO SUGGESTIONS
+   ========================================================== */
+let productSearchQuery = "";
 
+function setupProductSearch(){
+  const input = document.getElementById("productSearchInput");
+  const clear = document.getElementById("productSearchClear");
+  const suggestions = document.getElementById("searchSuggestions");
+  if(!input || input.dataset.bound === "true") return;
+  input.dataset.bound = "true";
+
+  function closeSuggestions(){
+    suggestions.classList.remove("open");
+    input.setAttribute("aria-expanded", "false");
+  }
+
+  function updateSuggestions(){
+    productSearchQuery = input.value.trim();
+    clear.style.display = productSearchQuery ? "block" : "none";
+    suggestions.innerHTML = "";
+    if(!productSearchQuery){
+      closeSuggestions();
+      renderProducts();
+      return;
+    }
+
+    const q = productSearchQuery.toLocaleLowerCase();
+    const matches = products.filter(p =>
+      String(p.name || "").toLocaleLowerCase().includes(q) ||
+      String(p.category || "").toLocaleLowerCase().includes(q) ||
+      String(p.description || "").toLocaleLowerCase().includes(q)
+    ).slice(0, 7);
+
+    if(!matches.length){
+      const empty = document.createElement("div");
+      empty.className = "search-empty";
+      empty.textContent = "No matching products found. Try another keyword.";
+      suggestions.appendChild(empty);
+    } else {
+      matches.forEach(product => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "search-suggestion";
+        option.setAttribute("role", "option");
+        const img = document.createElement("img");
+        img.className = "suggestion-icon";
+        img.src = product.imageUrl || "";
+        img.alt = "";
+        img.loading = "lazy";
+        const copy = document.createElement("span");
+        const name = document.createElement("span");
+        name.className = "suggestion-name";
+        name.textContent = product.name || "Product";
+        const meta = document.createElement("span");
+        meta.className = "suggestion-meta";
+        meta.textContent = (product.category || "Beauty") + " · Rs. " + Number(product.price || 0).toLocaleString();
+        copy.append(name, meta);
+        option.append(img, copy);
+        option.addEventListener("click", () => {
+          input.value = product.name || "";
+          productSearchQuery = input.value.trim();
+          clear.style.display = "block";
+          activeCategory = "All";
+          renderCategories();
+          closeSuggestions();
+          renderProducts();
+          document.getElementById("shop")?.scrollIntoView({behavior:"smooth", block:"start"});
+          const card = document.querySelector('.product-card[data-id="' + CSS.escape(String(product.id)) + '"]');
+          if(card) card.classList.add("search-match-highlight");
+        });
+        suggestions.appendChild(option);
+      });
+    }
+    suggestions.classList.add("open");
+    input.setAttribute("aria-expanded", "true");
+    renderProducts();
+  }
+
+  input.addEventListener("input", updateSuggestions);
+  input.addEventListener("focus", () => { if(input.value.trim()) updateSuggestions(); });
+  input.addEventListener("keydown", event => {
+    if(event.key === "Escape") closeSuggestions();
+    if(event.key === "Enter"){
+      const first = suggestions.querySelector(".search-suggestion");
+      if(first){ event.preventDefault(); first.click(); }
+    }
+  });
+  clear.addEventListener("click", () => {
+    input.value = "";
+    productSearchQuery = "";
+    clear.style.display = "none";
+    closeSuggestions();
+    renderProducts();
+    input.focus();
+  });
+  document.addEventListener("click", event => {
+    if(!event.target.closest(".live-search-wrap")) closeSuggestions();
   });
 }
 
@@ -1837,12 +1976,15 @@ function renderProducts(){
 
   grid.innerHTML = "";
 
-  const list =
-    activeCategory === "All"
-      ? products
-      : products.filter(
-          p => p.category === activeCategory
-        );
+  const query = String(productSearchQuery || "").trim().toLocaleLowerCase();
+  const list = products.filter(p => {
+    const categoryMatches = activeCategory === "All" || p.category === activeCategory;
+    const searchMatches = !query ||
+      String(p.name || "").toLocaleLowerCase().includes(query) ||
+      String(p.category || "").toLocaleLowerCase().includes(query) ||
+      String(p.description || "").toLocaleLowerCase().includes(query);
+    return categoryMatches && searchMatches;
+  });
 
   if(list.length === 0){
 
@@ -3596,6 +3738,7 @@ async function initApp(){
 
   await loadProducts();
 
+  setupProductSearch();
   renderCategories();
 
   renderProducts();
