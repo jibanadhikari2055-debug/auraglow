@@ -209,14 +209,21 @@ nav.main-nav a:hover{color:var(--primary);}
   color:var(--primary-dark);
   padding:0 16px;
 }
-/* Seamless, continuously looping category slider */
+/* Infinite category slider: auto-loop + manual left/right swipe/scroll */
 .category-scroll{
-  overflow:hidden;
+  overflow-x:auto;
+  overflow-y:hidden;
   width:100%;
   padding:4px 0 14px;
+  scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x pan-y;
+  scrollbar-width:none;
+  cursor:grab;
   -webkit-mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
   mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
 }
+.category-scroll::-webkit-scrollbar{display:none;}
 .category-track{
   display:flex;
   width:max-content;
@@ -224,8 +231,11 @@ nav.main-nav a:hover{color:var(--primary);}
   padding-left:16px;
   animation:categoryMarquee 34s linear infinite;
   will-change:transform;
+  user-select:none;
+  -webkit-user-select:none;
 }
-/* Keep the category marquee moving continuously, including while the page is scrolling or the pointer is over it. */
+.category-scroll:active{cursor:grabbing;}
+/* Keep the category marquee moving while still allowing manual horizontal scrolling. */
 .category-track{animation-play-state:running !important;}
 @keyframes categoryMarquee{
   from{transform:translateX(0)}
@@ -1864,7 +1874,7 @@ function renderCategories(){
   // Duplicate the categories once to create a seamless infinite marquee.
   [...categoryNames, ...categoryNames].forEach((cat, index) => {
     const btn = document.createElement("button");
-    const isClone = index >= CATEGORIES.length;
+    const isClone = index >= categoryNames.length;
     btn.type = "button";
     btn.className = "category-btn" + (cat === activeCategory ? " active" : "");
     btn.textContent = cat;
@@ -1890,6 +1900,31 @@ function renderCategories(){
     track.appendChild(btn);
   });
   wrap.appendChild(track);
+
+  // Native touch scrolling works on mobile; pointer dragging enables left/right scrolling on desktop.
+  let dragging = false, startX = 0, startScroll = 0;
+  wrap.onpointerdown = (event) => {
+    if(event.pointerType === "touch") return;
+    dragging = true;
+    startX = event.clientX;
+    startScroll = wrap.scrollLeft;
+    wrap.setPointerCapture?.(event.pointerId);
+  };
+  wrap.onpointermove = (event) => {
+    if(!dragging) return;
+    wrap.scrollLeft = startScroll - (event.clientX - startX);
+  };
+  const stopDragging = () => { dragging = false; };
+  wrap.onpointerup = stopDragging;
+  wrap.onpointercancel = stopDragging;
+  wrap.onpointerleave = stopDragging;
+  // Shift + mouse wheel also scrolls the categories horizontally.
+  wrap.onwheel = (event) => {
+    if(Math.abs(event.deltaY) > Math.abs(event.deltaX)){
+      wrap.scrollLeft += event.deltaY;
+      event.preventDefault();
+    }
+  };
 }
 
 /* ==========================================================
