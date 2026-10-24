@@ -225,9 +225,8 @@ nav.main-nav a:hover{color:var(--primary);}
   animation:categoryMarquee 34s linear infinite;
   will-change:transform;
 }
-.category-scroll:hover .category-track,
-.category-scroll:focus-within .category-track{animation-play-state:paused;}
-.category-scroll:active .category-track{animation-play-state:paused;}
+/* Keep the category marquee moving continuously, including while the page is scrolling or the pointer is over it. */
+.category-track{animation-play-state:running !important;}
 @keyframes categoryMarquee{
   from{transform:translateX(0)}
   to{transform:translateX(-50%)}
@@ -1331,7 +1330,7 @@ textarea:focus-visible{
 <section class="live-search-wrap" aria-label="Search products">
   <div class="live-search-box">
     <span class="live-search-icon" aria-hidden="true">⌕</span>
-    <input id="productSearchInput" type="search" placeholder="Search products, skincare, serum…" autocomplete="off" aria-label="Search products" aria-controls="searchSuggestions" aria-expanded="false">
+    <input id="productSearchInput" type="text" placeholder="Search products, skincare, serum…" autocomplete="off" aria-label="Search products" aria-controls="searchSuggestions" aria-expanded="false">
     <button id="productSearchClear" type="button" aria-label="Clear search">✕</button>
   </div>
   <div class="search-suggestions" id="searchSuggestions" role="listbox"></div>
@@ -1838,17 +1837,32 @@ function findProduct(id){
    CATEGORY BAR
    ========================================================== */
 
+function normalizeCategoryName(value){
+  return String(value || "").trim().toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
 function renderCategories(){
   const wrap = document.getElementById("categoryScroll");
   if(!wrap) return;
   wrap.innerHTML = "";
+
+  // Include categories actually present in Supabase too, so category labels
+  // never silently filter out products because of different naming/capitalization.
+  const seenCategories = new Set();
+  const categoryNames = ["All", ...CATEGORIES.filter(c => c !== "All"), ...products.map(p => p.category).filter(Boolean)]
+    .filter(cat => {
+      const key = normalizeCategoryName(cat);
+      if(!key || seenCategories.has(key)) return false;
+      seenCategories.add(key);
+      return true;
+    });
 
   const track = document.createElement("div");
   track.className = "category-track";
   track.setAttribute("aria-label", "Product categories");
 
   // Duplicate the categories once to create a seamless infinite marquee.
-  [...CATEGORIES, ...CATEGORIES].forEach((cat, index) => {
+  [...categoryNames, ...categoryNames].forEach((cat, index) => {
     const btn = document.createElement("button");
     const isClone = index >= CATEGORIES.length;
     btn.type = "button";
@@ -1861,6 +1875,15 @@ function renderCategories(){
     }
     btn.addEventListener("click", () => {
       activeCategory = cat;
+      // Category selection should show that category's products, not keep an old search filter.
+      productSearchQuery = "";
+      const searchInput = document.getElementById("productSearchInput");
+      const searchClear = document.getElementById("productSearchClear");
+      const suggestions = document.getElementById("searchSuggestions");
+      if(searchInput) searchInput.value = "";
+      if(searchClear) searchClear.style.display = "none";
+      if(suggestions){ suggestions.innerHTML = ""; suggestions.classList.remove("open"); }
+      if(searchInput) searchInput.setAttribute("aria-expanded", "false");
       renderCategories();
       renderProducts();
     });
@@ -1982,8 +2005,9 @@ function renderProducts(){
   grid.innerHTML = "";
 
   const query = String(productSearchQuery || "").trim().toLocaleLowerCase();
+  const activeCategoryKey = normalizeCategoryName(activeCategory);
   const list = products.filter(p => {
-    const categoryMatches = activeCategory === "All" || p.category === activeCategory;
+    const categoryMatches = activeCategoryKey === "all" || normalizeCategoryName(p.category) === activeCategoryKey;
     const searchMatches = !query ||
       String(p.name || "").toLocaleLowerCase().includes(query) ||
       String(p.category || "").toLocaleLowerCase().includes(query) ||
