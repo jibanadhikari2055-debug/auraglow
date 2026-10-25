@@ -1995,10 +1995,43 @@ const SUPABASE_URL = "https://tmdlhfkggxjexfaumsuq.supabase.co";
 
 const SUPABASE_KEY = "sb_publishable_TzeEZkbH1FeNLpSGGafX7g_bMA3GH_F";
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+/* The CDN can fail to load on slow/unstable connections. Do not let that
+   prevent the rest of the page from showing a useful error state. */
+let supabaseClient = (window.supabase && typeof window.supabase.createClient === "function")
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
+async function ensureSupabaseClient(){
+  if(!supabaseClient && window.supabase && typeof window.supabase.createClient === "function"){
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  if(supabaseClient) return supabaseClient;
+
+  /* The first CDN load may have failed before the store script ran. Retry it
+     once on startup/retry instead of leaving a permanent blank product area. */
+  const loader = document.createElement("script");
+  loader.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+  loader.async = true;
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (fn, value) => {
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(value);
+    };
+    const timer = setTimeout(() => finish(reject, new Error("Supabase library CDN did not respond within 15 seconds.")), 15000);
+    loader.onload = () => finish(resolve);
+    loader.onerror = () => finish(reject, new Error("Could not download the Supabase library. Check your internet connection."));
+    document.head.appendChild(loader);
+  });
+
+  if(window.supabase && typeof window.supabase.createClient === "function"){
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    return supabaseClient;
+  }
+  throw new Error("Supabase library loaded but its client API is unavailable.");
+}
 
 
 /* ==========================================================
@@ -2402,22 +2435,48 @@ function renderProducts(){
     .filter(item=>item.score>=400).sort((a,b)=>b.score-a.score||a.index-b.index).map(item=>item.product) : categoryFiltered;
 
   if(list.length === 0){
-
     if(productsLoadError){
-      grid.innerHTML =
-        `<p class="no-products">Could not load products right now.<br>` +
-        `<span style="font-size:0.8rem;color:#c0392b;">Error: ${productsLoadError}</span><br>` +
-        `Please check your Supabase setup (RLS policies) or try again shortly.</p>`;
+      const status = document.createElement("div");
+      status.className = "no-products";
+      const message = document.createElement("p");
+      message.textContent = "Could not load products right now.";
+      const detail = document.createElement("p");
+      detail.style.cssText = "font-size:0.8rem;color:#c0392b;margin-top:8px;overflow-wrap:anywhere;";
+      detail.textContent = "Error: " + productsLoadError;
+      const hint = document.createElement("p");
+      hint.style.marginTop = "8px";
+      hint.textContent = "Check your connection and Supabase setup, then try again.";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "btn btn-primary";
+      retry.textContent = "Retry loading products";
+      retry.style.marginTop = "12px";
+      retry.addEventListener("click", async () => {
+        if(retry.disabled) return;
+        retry.disabled = true;
+        retry.textContent = "Retrying…";
+        try{
+          await loadProducts();
+          renderProducts();
+        }catch(err){
+          console.error("[Aura Glow] Product retry failed:", err);
+          productsLoadError = (err && err.message) ? err.message : "Unknown error";
+          products = [];
+          renderProducts();
+        }
+      });
+      status.append(message, detail, hint, retry);
+      grid.replaceChildren(status);
       return;
     }
 
-    grid.innerHTML =
-      '<p class="no-products">No products found in this category yet. Check back soon!</p>';
-
+    grid.innerHTML = '<p class="no-products">No products found in this category yet. Check back soon!</p>';
     return;
   }
 
 
+  /* Build cards off-DOM first to reduce repeated layout/reflow on low-RAM phones. */
+  const productFragment = document.createDocumentFragment();
   list.forEach(p => {
 
     const card = document.createElement("div");
@@ -2517,9 +2576,10 @@ function renderProducts(){
       </div>
     `;
 
-    grid.appendChild(card);
+    productFragment.appendChild(card);
 
   });
+  grid.appendChild(productFragment);
 
 
   /* SCROLL-REVEAL ANIMATION */
@@ -4151,58 +4211,47 @@ function waLink(message){
    ========================================================== */
 
 async function initApp(){
+  /* Product loading errors are handled inside loadProducts; rendering must still
+     run so the loading message is replaced by products, an empty state, or Retry. */
+  try{
+    await loadProducts();
+  }catch(err){
+    console.error("[Aura Glow] Product initialization failed:", err);
+    products = [];
+    productsLoadError = (err && err.message) ? err.message : "Unable to load products";
+  }
 
-  await loadProducts();
+  try{
+    setupProductSearch();
+    renderCategories();
+    renderProducts();
+    renderCart();
+    renderWishlistBadge();
 
-  setupProductSearch();
-  renderCategories();
+    /* BRANDING */
+    const headerLogo = document.getElementById("headerLogo");
+    if(headerLogo){ headerLogo.src = SHOP.logoUrl; headerLogo.alt = SHOP.name + " logo"; }
+    const footerLogo = document.getElementById("footerLogo");
+    if(footerLogo){ footerLogo.src = SHOP.logoUrl; footerLogo.alt = SHOP.name + " logo"; }
 
-  renderProducts();
-
-  renderCart();
-
-  renderWishlistBadge();
-
-
-  /* BRANDING */
-
-  document
-    .getElementById("headerLogo")
-    .src = SHOP.logoUrl;
-
-  document
-    .getElementById("headerLogo")
-    .alt =
-      SHOP.name + " logo";
-
-
-  document
-    .getElementById("footerLogo")
-    .src = SHOP.logoUrl;
-
-  document
-    .getElementById("footerLogo")
-    .alt =
-      SHOP.name + " logo";
-
-
-  /* WHATSAPP CHAT */
-
-  const defaultMsg =
-    "Hello " +
-    SHOP.name +
-    ", I would like to know more about your products.";
-
-
-  document
-    .getElementById("contactWhatsapp")
-    .href = waLink(defaultMsg);
-
-
-  document
-    .getElementById("footerWhatsapp")
-    .href = waLink(defaultMsg);
-
+    /* WHATSAPP CHAT */
+    const defaultMsg = "Hello " + SHOP.name + ", I would like to know more about your products.";
+    const contactWhatsapp = document.getElementById("contactWhatsapp");
+    if(contactWhatsapp) contactWhatsapp.href = waLink(defaultMsg);
+    const footerWhatsapp = document.getElementById("footerWhatsapp");
+    if(footerWhatsapp) footerWhatsapp.href = waLink(defaultMsg);
+  }catch(err){
+    console.error("[Aura Glow] App initialization/rendering error:", err);
+    if(!productsLoadError) productsLoadError = "The page could not finish initializing. Please reload and try again.";
+    const grid = document.getElementById("productGrid");
+    if(grid && grid.textContent.includes("Loading products")){
+      grid.innerHTML = "";
+      const status = document.createElement("div");
+      status.className = "no-products";
+      status.textContent = productsLoadError;
+      grid.appendChild(status);
+    }
+  }
 }
 
 </script>
@@ -4373,57 +4422,74 @@ function normalizeProduct(row){
   };
 }
 
+let productsLoadPromise = null;
+let productsLoadController = null;
+const PRODUCTS_REQUEST_TIMEOUT_MS = 45000;
+
 async function loadProducts(){
+  /* Share one in-flight request so repeated taps/init calls do not pile up. */
+  if(productsLoadPromise) return productsLoadPromise;
+
   productsLoadError = null;
-  try{
-    const { data, error } = await supabaseClient
-      .from("products")
-      .select("*")
-      .order("id", { ascending: true });
+  productsLoadController = (typeof AbortController !== "undefined") ? new AbortController() : null;
 
-    if(error){
-      console.error("[Aura Glow] Could not load products from Supabase. Full error:", error);
-      productsLoadError = error.message || "Unknown Supabase error";
+  productsLoadPromise = (async () => {
+    let timeoutId = null;
+    let slowNoticeTimer = null;
+    let requestTimedOut = false;
+    try{
+      const client = await ensureSupabaseClient();
+      if(!client) throw new Error("Supabase client did not load. Check your internet connection and retry.");
+
+      let request = client.from("products").select("*").order("id", { ascending: true });
+      /* A slow request stays alive; after 12s, explain that we are still waiting. */
+      slowNoticeTimer = setTimeout(() => {
+        const grid = document.getElementById("productGrid");
+        if(grid && /Loading products/i.test(grid.textContent || "")){
+          grid.innerHTML = '<p class="no-products" role="status" aria-live="polite">Still loading products… Your connection may be slow. Please keep this page open.</p>';
+        }
+      }, 12000);
+      if(productsLoadController && request && typeof request.abortSignal === "function"){
+        request = request.abortSignal(productsLoadController.signal);
+      }
+
+      /* 45 seconds allows slow mobile connections to finish. Race the request
+         with the deadline as a fallback, and abort the network request when possible. */
+      const timeoutPromise = new Promise((resolve, reject) => {
+        timeoutId = setTimeout(() => {
+          requestTimedOut = true;
+          try{ if(productsLoadController) productsLoadController.abort(); }catch(_){}
+          reject(new Error("PRODUCT_REQUEST_TIMEOUT"));
+        }, PRODUCTS_REQUEST_TIMEOUT_MS);
+      });
+
+      const result = await Promise.race([request, timeoutPromise]);
+      if(result && result.error) throw result.error;
+      if(!result || !Array.isArray(result.data)){
+        throw new Error("Supabase returned an unexpected product response.");
+      }
+
+      /* Empty means genuinely empty: never insert demo/default products into the live table. */
+      products = result.data.map(normalizeProduct);
+      productsLoadError = null;
+      return products;
+    }catch(err){
+      const message = requestTimedOut
+        ? "The product request timed out after 45 seconds. Check your connection and retry."
+        : ((err && err.message) ? err.message : "Connection error while loading products.");
+      console.error("[Aura Glow] Could not load products from Supabase:", err);
+      productsLoadError = message;
       products = [];
-      return;
+      return [];
+    }finally{
+      if(timeoutId !== null) clearTimeout(timeoutId);
+      if(slowNoticeTimer !== null) clearTimeout(slowNoticeTimer);
+      productsLoadController = null;
+      productsLoadPromise = null;
     }
+  })();
 
-    if(!data || data.length === 0){
-      /* Table is empty — seed it once with the default products. */
-      const { error: seedError } = await supabaseClient
-        .from("products")
-        .insert(DEFAULT_PRODUCTS);
-
-      if(seedError){
-        console.error("[Aura Glow] Could not seed default products. Full error:", seedError);
-        productsLoadError = seedError.message || "Unknown Supabase error";
-        products = [];
-        return;
-      }
-
-      const { data: seeded, error: reFetchError } = await supabaseClient
-        .from("products")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if(reFetchError){
-        console.error("[Aura Glow] Could not re-fetch after seeding. Full error:", reFetchError);
-        productsLoadError = reFetchError.message || "Unknown Supabase error";
-        products = [];
-        return;
-      }
-
-      products = seeded.map(normalizeProduct);
-      return;
-    }
-
-    products = data.map(normalizeProduct);
-
-  }catch(err){
-    console.error("[Aura Glow] Unexpected error loading products:", err);
-    productsLoadError = (err && err.message) ? err.message : "Connection error";
-    products = [];
-  }
+  return productsLoadPromise;
 }
 
 </script>
@@ -4462,10 +4528,24 @@ const WHATSAPP_NUMBER =
   settings and products are loaded.
 */
 
-document.getElementById("productGrid").innerHTML =
-  '<p class="no-products">Loading products…</p>';
+const initialProductGrid = document.getElementById("productGrid");
+if(initialProductGrid){
+  initialProductGrid.innerHTML = '<p class="no-products" role="status" aria-live="polite">Loading products…</p>';
+}
 
-initApp();
+initApp().catch(err => {
+  console.error("[Aura Glow] Unhandled startup error:", err);
+  products = [];
+  productsLoadError = (err && err.message) ? err.message : "Unexpected startup error";
+  const grid = document.getElementById("productGrid");
+  if(grid){
+    grid.innerHTML = "";
+    const message = document.createElement("p");
+    message.className = "no-products";
+    message.textContent = "Could not initialize the store. Please refresh the page and try again.";
+    grid.appendChild(message);
+  }
+});
 
 </script>
 
