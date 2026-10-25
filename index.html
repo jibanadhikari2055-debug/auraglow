@@ -209,38 +209,17 @@ nav.main-nav a:hover{color:var(--primary);}
   color:var(--primary-dark);
   padding:0 16px;
 }
-/* Infinite category slider: auto-loop + manual left/right swipe/scroll */
+/* Infinite category slider: native scroll + seamless looping in both directions */
 .category-scroll{
-  overflow-x:auto;
-  overflow-y:hidden;
-  width:100%;
-  padding:4px 0 14px;
-  scroll-behavior:smooth;
-  -webkit-overflow-scrolling:touch;
-  touch-action:pan-x pan-y;
-  scrollbar-width:none;
-  cursor:grab;
+  overflow-x:auto;overflow-y:hidden;width:100%;padding:4px 0 14px;
+  scroll-behavior:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;
+  overscroll-behavior-x:contain;scrollbar-width:none;cursor:grab;
   -webkit-mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
   mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
 }
 .category-scroll::-webkit-scrollbar{display:none;}
-.category-track{
-  display:flex;
-  width:max-content;
-  gap:9px;
-  padding-left:16px;
-  animation:categoryMarquee 34s linear infinite;
-  will-change:transform;
-  user-select:none;
-  -webkit-user-select:none;
-}
+.category-track{display:flex;width:max-content;gap:9px;padding:0 16px;user-select:none;-webkit-user-select:none;will-change:scroll-position;}
 .category-scroll:active{cursor:grabbing;}
-/* Keep the category marquee moving while still allowing manual horizontal scrolling. */
-.category-track{animation-play-state:running !important;}
-@keyframes categoryMarquee{
-  from{transform:translateX(0)}
-  to{transform:translateX(-50%)}
-}
 .category-btn{
   flex:0 0 auto;
   background:var(--white);
@@ -281,7 +260,7 @@ nav.main-nav a:hover{color:var(--primary);}
 .search-suggestion .suggestion-meta{font-size:.75rem;color:#777;margin-top:3px;}
 .search-empty{padding:15px;color:#777;font-size:.88rem;}
 .search-match-highlight{outline:2px solid var(--primary);outline-offset:3px;}
-@media(prefers-reduced-motion:reduce){.category-track{animation:none;}}
+@media(prefers-reduced-motion:reduce){.category-scroll{scroll-behavior:auto;}}
 
 /* PRODUCTS */
 .products{padding:20px 16px 50px;}
@@ -1861,10 +1840,12 @@ function normalizeCategoryName(value){
 function renderCategories(){
   const wrap = document.getElementById("categoryScroll");
   if(!wrap) return;
+
+  // Clean up any previous animation/observer if categories are re-rendered.
+  if(wrap._categoryRaf) cancelAnimationFrame(wrap._categoryRaf);
+  if(wrap._categoryResizeObserver) wrap._categoryResizeObserver.disconnect();
   wrap.innerHTML = "";
 
-  // Include categories actually present in Supabase too, so category labels
-  // never silently filter out products because of different naming/capitalization.
   const seenCategories = new Set();
   const categoryNames = ["All", ...CATEGORIES.filter(c => c !== "All"), ...products.map(p => p.category).filter(Boolean)]
     .filter(cat => {
@@ -1873,26 +1854,21 @@ function renderCategories(){
       seenCategories.add(key);
       return true;
     });
+  if(!categoryNames.length) return;
 
   const track = document.createElement("div");
   track.className = "category-track";
   track.setAttribute("aria-label", "Product categories");
-
-  // Duplicate the categories once to create a seamless infinite marquee.
-  [...categoryNames, ...categoryNames].forEach((cat, index) => {
+  const buildSet = (clone) => categoryNames.forEach((cat) => {
     const btn = document.createElement("button");
-    const isClone = index >= categoryNames.length;
     btn.type = "button";
     btn.className = "category-btn" + (cat === activeCategory ? " active" : "");
     btn.textContent = cat;
     btn.setAttribute("aria-label", "Filter by " + cat);
-    if(isClone){
-      btn.setAttribute("aria-hidden", "true");
-      btn.tabIndex = -1;
-    }
-    btn.addEventListener("click", () => {
+    if(clone){ btn.setAttribute("aria-hidden", "true"); btn.tabIndex = -1; }
+    btn.addEventListener("click", (event) => {
+      if(wrap._categoryDragged){ event.preventDefault(); event.stopPropagation(); return; }
       activeCategory = cat;
-      // Category selection should show that category's products, not keep an old search filter.
       productSearchQuery = "";
       const searchInput = document.getElementById("productSearchInput");
       const searchClear = document.getElementById("productSearchClear");
@@ -1906,34 +1882,78 @@ function renderCategories(){
     });
     track.appendChild(btn);
   });
+  // Three identical sets let the visible row sit in the middle and wrap forever left/right.
+  buildSet(true); buildSet(false); buildSet(true);
   wrap.appendChild(track);
 
-  // Native touch scrolling works on mobile; pointer dragging enables left/right scrolling on desktop.
-  let dragging = false, startX = 0, startScroll = 0;
+  let cycleWidth = 0;
+  const setMiddlePosition = () => {
+    cycleWidth = track.scrollWidth / 3;
+    if(cycleWidth > 0) wrap.scrollLeft = cycleWidth;
+  };
+  requestAnimationFrame(setMiddlePosition);
+
+  let recentering = false;
+  wrap.onscroll = () => {
+    if(recentering || !cycleWidth) return;
+    const leftBoundary = cycleWidth * 0.45;
+    const rightBoundary = cycleWidth * 1.55;
+    if(wrap.scrollLeft < leftBoundary || wrap.scrollLeft > rightBoundary){
+      recentering = true;
+      wrap.scrollLeft = cycleWidth + ((wrap.scrollLeft % cycleWidth) + cycleWidth) % cycleWidth;
+      recentering = false;
+    }
+  };
+
+  let dragging = false, startX = 0, startScroll = 0, moved = 0;
+  wrap._categoryDragged = false;
   wrap.onpointerdown = (event) => {
-    if(event.pointerType === "touch") return;
-    dragging = true;
-    startX = event.clientX;
-    startScroll = wrap.scrollLeft;
+    if(event.pointerType === "touch" || event.button !== 0) return;
+    dragging = true; moved = 0; wrap._categoryDragged = false;
+    startX = event.clientX; startScroll = wrap.scrollLeft;
     wrap.setPointerCapture?.(event.pointerId);
   };
   wrap.onpointermove = (event) => {
     if(!dragging) return;
-    wrap.scrollLeft = startScroll - (event.clientX - startX);
+    const delta = event.clientX - startX;
+    moved = Math.max(moved, Math.abs(delta));
+    if(moved > 4) wrap._categoryDragged = true;
+    wrap.scrollLeft = startScroll - delta;
   };
-  const stopDragging = () => { dragging = false; };
+  const stopDragging = () => {
+    if(!dragging) return;
+    dragging = false;
+    if(wrap._categoryDragged) setTimeout(() => { wrap._categoryDragged = false; }, 80);
+  };
   wrap.onpointerup = stopDragging;
   wrap.onpointercancel = stopDragging;
   wrap.onpointerleave = stopDragging;
-  // Shift + mouse wheel also scrolls the categories horizontally.
   wrap.onwheel = (event) => {
     if(Math.abs(event.deltaY) > Math.abs(event.deltaX)){
       wrap.scrollLeft += event.deltaY;
       event.preventDefault();
     }
   };
-}
 
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let lastTime = 0;
+  const autoScroll = (time) => {
+    if(!document.hidden && !reduceMotion && !dragging && !wrap.matches(':hover') && !wrap.matches(':focus-within')){
+      if(lastTime) wrap.scrollLeft += (time - lastTime) * 0.024;
+    }
+    lastTime = time;
+    wrap._categoryRaf = requestAnimationFrame(autoScroll);
+  };
+  wrap._categoryRaf = requestAnimationFrame(autoScroll);
+  if(typeof ResizeObserver !== 'undefined'){
+    wrap._categoryResizeObserver = new ResizeObserver(() => {
+      const oldCycle = cycleWidth;
+      cycleWidth = track.scrollWidth / 3;
+      if(cycleWidth > 0 && (!oldCycle || Math.abs(cycleWidth-oldCycle)>2)) wrap.scrollLeft = cycleWidth;
+    });
+    wrap._categoryResizeObserver.observe(track);
+  }
+}
 /* ==========================================================
    UNIVERSAL TYPO-TOLERANT PRODUCT SEARCH
    Dynamic fields from every loaded Supabase product; no per-product rules.
