@@ -1466,6 +1466,9 @@ footer a:hover{color:#ff004e!important}
 .search-suggestion .suggestion-meta{color:#796873!important}
 .search-suggestion mark{background:rgba(255,0,78,.15)!important;color:#d90045!important;border-radius:999px!important;padding:1px 4px}
 @media(max-width:600px){
+ /* Keep the same translucent look with less GPU work on budget phones. */
+ .live-search-wrap,
+ .search-suggestions{ -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
  .hero h1{font-size:clamp(2rem,8vw,3rem)!important;letter-spacing:-.025em}
  .live-search-wrap{padding:9px 11px!important}
  .live-search-box{min-height:52px!important;padding:0 13px!important}
@@ -1473,6 +1476,14 @@ footer a:hover{color:#ff004e!important}
  .search-suggestion{border-radius:999px!important}
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior:auto !important;
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+  }
+}
 </style>
 </head>
 
@@ -1481,7 +1492,7 @@ footer a:hover{color:#ff004e!important}
 <header>
   <div class="header-inner">
     <div class="brand">
-      <img id="headerLogo" class="brand-logo" src="https://i.ibb.co/TMNfKxdK/d29e530169fa5d250b5e491f77441b7be0ecf3291f871c05f1e7b50a82445cac.png" alt="Aura Glow Store logo" loading="lazy">
+      <img id="headerLogo" class="brand-logo" src="https://i.ibb.co/TMNfKxdK/d29e530169fa5d250b5e491f77441b7be0ecf3291f871c05f1e7b50a82445cac.png" alt="Aura Glow Store logo" loading="eager" fetchpriority="high" decoding="async">
       <div class="brand-text">
         <span class="brand-name">Aura Glow Store</span>
         <span class="brand-tag">Glow With Confidence</span>
@@ -2040,7 +2051,12 @@ function renderCategories(){
 
   // Clean up any previous animation/observer if categories are re-rendered.
   if(wrap._categoryRaf) cancelAnimationFrame(wrap._categoryRaf);
+  wrap._categoryRaf = 0;
   if(wrap._categoryResizeObserver) wrap._categoryResizeObserver.disconnect();
+  if(wrap._categoryVisibilityHandler) {
+    document.removeEventListener("visibilitychange", wrap._categoryVisibilityHandler);
+    wrap._categoryVisibilityHandler = null;
+  }
   wrap.innerHTML = "";
 
   const seenCategories = new Set();
@@ -2139,16 +2155,51 @@ function renderCategories(){
     }
   };
 
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   let lastTime = 0;
+  const shouldPauseAutoScroll = () =>
+    reduceMotion || document.hidden || dragging ||
+    wrap.matches(':hover') || wrap.matches(':focus-within');
+
   const autoScroll = (time) => {
-    if(!document.hidden && !reduceMotion && !dragging && !wrap.matches(':hover') && !wrap.matches(':focus-within')){
-      if(lastTime) wrap.scrollLeft += (time - lastTime) * 0.024;
+    if(shouldPauseAutoScroll()) {
+      wrap._categoryRaf = 0;
+      lastTime = 0;
+      return;
     }
+    if(lastTime) wrap.scrollLeft += Math.min(time - lastTime, 50) * 0.024;
     lastTime = time;
     wrap._categoryRaf = requestAnimationFrame(autoScroll);
   };
-  wrap._categoryRaf = requestAnimationFrame(autoScroll);
+  const startAutoScroll = () => {
+    if(!wrap._categoryRaf && !shouldPauseAutoScroll()) {
+      lastTime = 0;
+      wrap._categoryRaf = requestAnimationFrame(autoScroll);
+    }
+  };
+  const stopAutoScroll = () => {
+    if(wrap._categoryRaf) cancelAnimationFrame(wrap._categoryRaf);
+    wrap._categoryRaf = 0;
+    lastTime = 0;
+  };
+  wrap.onmouseenter = stopAutoScroll;
+  wrap.onmouseleave = startAutoScroll;
+  wrap.onfocusin = stopAutoScroll;
+  wrap.onfocusout = startAutoScroll;
+  wrap._categoryVisibilityHandler = () => document.hidden ? stopAutoScroll() : startAutoScroll();
+  document.addEventListener("visibilitychange", wrap._categoryVisibilityHandler);
+  const previousStopDragging = stopDragging;
+  wrap.onpointerdown = (event) => {
+    if(event.pointerType === "touch" || event.button !== 0) return;
+    dragging = true; moved = 0; wrap._categoryDragged = false;
+    startX = event.clientX; startScroll = wrap.scrollLeft;
+    stopAutoScroll();
+    wrap.setPointerCapture?.(event.pointerId);
+  };
+  wrap.onpointerup = () => { previousStopDragging(); startAutoScroll(); };
+  wrap.onpointercancel = () => { previousStopDragging(); startAutoScroll(); };
+  wrap.onpointerleave = () => { previousStopDragging(); startAutoScroll(); };
+  startAutoScroll();
   if(typeof ResizeObserver !== 'undefined'){
     wrap._categoryResizeObserver = new ResizeObserver(() => {
       const oldCycle = cycleWidth;
@@ -2336,6 +2387,11 @@ function setupProductSearch(){
 function renderProducts(){
 
   const grid = document.getElementById("productGrid");
+  if(!grid) return;
+  if(grid._revealObserver) {
+    grid._revealObserver.disconnect();
+    grid._revealObserver = null;
+  }
 
   grid.innerHTML = "";
 
@@ -2476,6 +2532,7 @@ function renderProducts(){
       }
     });
   }, { threshold: 0.1 });
+  grid._revealObserver = revealObserver;
 
   grid.querySelectorAll(".product-card").forEach((card, index) => {
     card.style.transitionDelay = Math.min(index * 60, 300) + "ms";
