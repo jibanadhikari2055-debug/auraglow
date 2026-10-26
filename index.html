@@ -289,11 +289,10 @@ nav.main-nav a:hover{color:var(--primary);}
   overflow-x:auto;overflow-y:hidden;width:100%;padding:4px 0 14px;
   scroll-behavior:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;
   overscroll-behavior-x:contain;scrollbar-width:none;cursor:grab;
-  -webkit-mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
-  mask-image:linear-gradient(to right,transparent,black 3%,black 97%,transparent);
+  
 }
 .category-scroll::-webkit-scrollbar{display:none;}
-.category-track{display:flex;width:max-content;gap:9px;padding:0 16px;user-select:none;-webkit-user-select:none;will-change:scroll-position;}
+.category-track{display:flex;width:max-content;gap:9px;padding:0 16px;user-select:none;-webkit-user-select:none;}
 .category-scroll:active{cursor:grabbing;}
 .category-btn{
   flex:0 0 auto;
@@ -305,7 +304,7 @@ nav.main-nav a:hover{color:var(--primary);}
   font-size:0.82rem;
   white-space:nowrap;
   cursor:pointer;
-  transition:all var(--transition), transform 0.15s ease;
+  transition:transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
 }
 .category-btn:active{transform:scale(0.93);}
 .category-btn.active{
@@ -315,7 +314,7 @@ nav.main-nav a:hover{color:var(--primary);}
 }
 
 /* Neumorphic live product search + typo-tolerant auto suggestions */
-.live-search-wrap{position:sticky;top:66px;z-index:990;width:100%;max-width:none;margin:0 auto;padding:10px 16px;background:rgba(245,247,251,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 5px 18px rgba(35,15,22,.045);}
+.live-search-wrap{position:sticky;top:66px;z-index:990;width:100%;max-width:none;margin:0 auto;padding:10px 16px;background:rgba(245,247,251,.94);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 5px 18px rgba(35,15,22,.045);}
 .live-search-box{position:relative;display:flex;align-items:center;gap:12px;width:100%;max-width:760px;margin:0 auto;background:#f2f4f8;border:1px solid rgba(255,255,255,.9);border-radius:999px;padding:0 17px;min-height:58px;box-shadow:8px 8px 18px rgba(163,177,198,.32),-8px -8px 18px rgba(255,255,255,.95),inset 1px 1px 2px rgba(255,255,255,.9);transition:box-shadow .25s ease,transform .25s ease,border-color .25s ease;}
 .live-search-box:focus-within{border-color:rgba(255,0,78,.24);box-shadow:inset 4px 4px 9px rgba(163,177,198,.24),inset -4px -4px 9px rgba(255,255,255,.96),0 0 0 3px rgba(255,0,78,.07);transform:translateY(-1px);}
 .live-search-icon{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:50%;font-size:1.2rem;font-weight:700;color:var(--primary);background:#f2f4f8;box-shadow:3px 3px 7px rgba(163,177,198,.28),-3px -3px 7px rgba(255,255,255,.95);}
@@ -764,8 +763,8 @@ nav.main-nav a:hover{color:var(--primary);}
 /* THANK YOU / ORDER PLACED */
 .thankyou-modal{
   background:rgba(47,47,47,0.28);
-  -webkit-backdrop-filter:blur(3px);
-  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
   padding:max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 .thankyou-box{
@@ -1416,8 +1415,8 @@ footer{background:var(--neo-bg)!important;color:#665761!important;box-shadow:0 -
 .mobile-nav a{background:var(--neo-bg)!important;color:var(--neo-ink)!important}
 .gallery-thumb{background:var(--neo-bg)!important;border:2px solid transparent!important;box-shadow:3px 3px 7px rgba(194,176,188,.35),-3px -3px 7px rgba(255,255,255,.9)}
 .gallery-thumb.active{border-color:var(--neo-pink)!important}
-.overlay{backdrop-filter:blur(5px);background:rgba(48,38,45,.34)!important}
-.modal{background:rgba(48,38,45,.34)!important;backdrop-filter:blur(5px)}
+.overlay{backdrop-filter:none;background:rgba(48,38,45,.34)!important}
+.modal{background:rgba(48,38,45,.34)!important;backdrop-filter:none}
 .no-products{background:var(--neo-bg)!important;border-radius:22px;padding:26px;box-shadow:inset 5px 5px 10px rgba(194,176,188,.35),inset -5px -5px 10px rgba(255,255,255,.92)}
 :focus-visible{outline:2px solid rgba(255,0,78,.7)!important;outline-offset:3px}
 @media(max-width:600px){.product-grid{gap:14px}.product-card,.related-card{border-radius:18px!important}.hero{border-radius:0 0 24px 24px}.contact{padding-top:30px!important;padding-bottom:30px!important}.cart-drawer{border-radius:22px 0 0 22px!important}}
@@ -1468,7 +1467,7 @@ footer a:hover{color:#ff004e!important}
 @media(max-width:600px){
  /* Keep the same translucent look with less GPU work on budget phones. */
  .live-search-wrap,
- .search-suggestions{ -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+ .search-suggestions{ -webkit-backdrop-filter:none; backdrop-filter:none; }
  .hero h1{font-size:clamp(2rem,8vw,3rem)!important;letter-spacing:-.025em}
  .live-search-wrap{padding:9px 11px!important}
  .live-search-box{min-height:52px!important;padding:0 13px!important}
@@ -2082,165 +2081,154 @@ function renderCategories(){
   const wrap = document.getElementById("categoryScroll");
   if(!wrap) return;
 
-  // Clean up any previous animation/observer if categories are re-rendered.
   if(wrap._categoryRaf) cancelAnimationFrame(wrap._categoryRaf);
-  wrap._categoryRaf = 0;
   if(wrap._categoryResizeObserver) wrap._categoryResizeObserver.disconnect();
-  if(wrap._categoryVisibilityHandler) {
-    document.removeEventListener("visibilitychange", wrap._categoryVisibilityHandler);
-    wrap._categoryVisibilityHandler = null;
-  }
+  if(wrap._categoryVisibilityHandler) document.removeEventListener("visibilitychange", wrap._categoryVisibilityHandler);
+  if(wrap._categoryResumeTimer) clearTimeout(wrap._categoryResumeTimer);
+  wrap._categoryRaf = 0;
+  wrap._categoryResizeObserver = null;
+  wrap._categoryVisibilityHandler = null;
+  wrap._categoryResumeTimer = 0;
   wrap.innerHTML = "";
 
-  const seenCategories = new Set();
-  const categoryNames = ["All", ...CATEGORIES.filter(c => c !== "All"), ...products.map(p => p.category).filter(Boolean)]
-    .filter(cat => {
-      const key = normalizeCategoryName(cat);
-      if(!key || seenCategories.has(key)) return false;
-      seenCategories.add(key);
+  const seen = new Set();
+  const names = ["All", ...CATEGORIES.filter(c => c !== "All"), ...products.map(p => p.category).filter(Boolean)]
+    .filter(name => {
+      const key = normalizeCategoryName(name);
+      if(!key || seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
-  if(!categoryNames.length) return;
+  if(!names.length) return;
 
   const track = document.createElement("div");
   track.className = "category-track";
   track.setAttribute("aria-label", "Product categories");
-  const buildSet = (clone) => categoryNames.forEach((cat) => {
+  const addSet = clone => names.forEach(cat => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "category-btn" + (cat === activeCategory ? " active" : "");
+    btn.className = "category-btn";
     btn.textContent = cat;
     btn.setAttribute("aria-label", "Filter by " + cat);
-    btn.setAttribute("aria-pressed", cat === activeCategory ? "true" : "false");
     if(clone){ btn.setAttribute("aria-hidden", "true"); btn.tabIndex = -1; }
-    btn.addEventListener("click", (event) => {
-      if(wrap._categoryDragged){ event.preventDefault(); event.stopPropagation(); return; }
-      activeCategory = cat;
-      productSearchQuery = "";
-      const searchInput = document.getElementById("productSearchInput");
-      const searchClear = document.getElementById("productSearchClear");
-      const suggestions = document.getElementById("searchSuggestions");
-      if(searchInput) searchInput.value = "";
-      if(searchClear) searchClear.style.display = "none";
-      if(suggestions){ suggestions.innerHTML = ""; suggestions.classList.remove("open"); }
-      if(searchInput) searchInput.setAttribute("aria-expanded", "false");
-      // Update selected state without rebuilding the infinite slider; this keeps
-      // click/touch interaction reliable and avoids resetting the scroll position.
-      wrap.querySelectorAll(".category-btn").forEach((categoryButton) => {
-        const isActive = normalizeCategoryName(categoryButton.textContent) === normalizeCategoryName(activeCategory);
-        categoryButton.classList.toggle("active", isActive);
-        categoryButton.setAttribute("aria-pressed", isActive ? "true" : "false");
-      });
-      renderProducts();
-    });
     track.appendChild(btn);
   });
-  // Three identical sets let the visible row sit in the middle and wrap forever left/right.
-  buildSet(true); buildSet(false); buildSet(true);
+  addSet(true); addSet(false); addSet(true);
   wrap.appendChild(track);
 
-  let cycleWidth = 0;
+  let cycleWidth = 0, recentering = false;
+  const setActiveState = () => wrap.querySelectorAll(".category-btn").forEach(btn => {
+    const active = normalizeCategoryName(btn.textContent) === normalizeCategoryName(activeCategory);
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
   const setMiddlePosition = () => {
     cycleWidth = track.scrollWidth / 3;
     if(cycleWidth > 0) wrap.scrollLeft = cycleWidth;
+    setActiveState();
   };
   requestAnimationFrame(setMiddlePosition);
 
-  let recentering = false;
   wrap.onscroll = () => {
     if(recentering || !cycleWidth) return;
-    const leftBoundary = cycleWidth * 0.45;
-    const rightBoundary = cycleWidth * 1.55;
-    if(wrap.scrollLeft < leftBoundary || wrap.scrollLeft > rightBoundary){
+    if(wrap.scrollLeft < cycleWidth * .45 || wrap.scrollLeft > cycleWidth * 1.55){
       recentering = true;
       wrap.scrollLeft = cycleWidth + ((wrap.scrollLeft % cycleWidth) + cycleWidth) % cycleWidth;
       recentering = false;
     }
   };
 
-  let dragging = false, startX = 0, startScroll = 0, moved = 0;
-  wrap._categoryDragged = false;
-  wrap.onpointerdown = (event) => {
-    if(event.pointerType === "touch" || event.button !== 0) return;
-    dragging = true; moved = 0; wrap._categoryDragged = false;
-    startX = event.clientX; startScroll = wrap.scrollLeft;
-    wrap.setPointerCapture?.(event.pointerId);
+  /* Delegate clicks from the scroll wrapper. No pointer capture: it can retarget
+     clicks on some mobile browsers and was unnecessary for native touch scrolling. */
+  wrap.onclick = event => {
+    const btn = event.target.closest(".category-btn");
+    if(!btn || !wrap.contains(btn)) return;
+    if(wrap._categoryDragged){ event.preventDefault(); event.stopPropagation(); return; }
+    activeCategory = btn.textContent.trim() || "All";
+    productSearchQuery = "";
+    const input = document.getElementById("productSearchInput");
+    const clear = document.getElementById("productSearchClear");
+    const suggestions = document.getElementById("searchSuggestions");
+    if(input){ input.value = ""; input.setAttribute("aria-expanded", "false"); }
+    if(clear) clear.style.display = "none";
+    if(suggestions){ suggestions.innerHTML = ""; suggestions.classList.remove("open"); }
+    setActiveState();
+    renderProducts();
   };
-  wrap.onpointermove = (event) => {
-    if(!dragging) return;
+
+  let dragging = false, startX = 0, startScroll = 0, moved = 0, pointerId = null, touchPointerId = null;
+  wrap._categoryDragged = false;
+  const stopAutoScroll = () => {
+    if(wrap._categoryRaf) cancelAnimationFrame(wrap._categoryRaf);
+    wrap._categoryRaf = 0;
+  };
+  const shouldPause = () => document.hidden || wrap.matches(":hover") || wrap.matches(":focus-within") || dragging;
+  let lastTime = 0;
+  const autoScroll = time => {
+    if(shouldPause()){ wrap._categoryRaf = 0; lastTime = 0; return; }
+    if(lastTime) wrap.scrollLeft += Math.min(time - lastTime, 50) * .024;
+    lastTime = time;
+    wrap._categoryRaf = requestAnimationFrame(autoScroll);
+  };
+  const startAutoScroll = () => {
+    if(!wrap._categoryRaf && !shouldPause() && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+      lastTime = 0;
+      wrap._categoryRaf = requestAnimationFrame(autoScroll);
+    }
+  };
+  const resumeAutoScroll = () => {
+    if(wrap._categoryResumeTimer) clearTimeout(wrap._categoryResumeTimer);
+    wrap._categoryResumeTimer = setTimeout(() => { wrap._categoryResumeTimer = 0; startAutoScroll(); }, 700);
+  };
+  wrap.onpointerdown = event => {
+    stopAutoScroll();
+    moved = 0; startX = event.clientX; wrap._categoryDragged = false;
+    if(event.pointerType === "touch") { touchPointerId = event.pointerId; return; }
+    if(event.button !== 0) return;
+    dragging = true; pointerId = event.pointerId; startScroll = wrap.scrollLeft;
+  };
+  wrap.onpointermove = event => {
+    if(event.pointerType === "touch" && touchPointerId === event.pointerId){
+      moved = Math.max(moved, Math.abs(event.clientX - startX));
+      if(moved > 7) wrap._categoryDragged = true;
+      return; // native touch scroll stays in control
+    }
+    if(!dragging || (pointerId !== null && event.pointerId !== pointerId)) return;
     const delta = event.clientX - startX;
     moved = Math.max(moved, Math.abs(delta));
-    if(moved > 4) wrap._categoryDragged = true;
-    wrap.scrollLeft = startScroll - delta;
+    if(moved > 7) wrap._categoryDragged = true;
+    if(wrap._categoryDragged) wrap.scrollLeft = startScroll - delta;
   };
-  const stopDragging = () => {
-    if(!dragging) return;
-    dragging = false;
-    if(wrap._categoryDragged) setTimeout(() => { wrap._categoryDragged = false; }, 80);
+  const endPointer = () => {
+    if(dragging){ dragging = false; pointerId = null; }
+    if(touchPointerId !== null) touchPointerId = null;
+    if(wrap._categoryDragged) setTimeout(() => { wrap._categoryDragged = false; }, 120);
+    resumeAutoScroll();
   };
-  wrap.onpointerup = stopDragging;
-  wrap.onpointercancel = stopDragging;
-  wrap.onpointerleave = stopDragging;
-  wrap.onwheel = (event) => {
+  wrap.onpointerup = endPointer;
+  wrap.onpointercancel = endPointer;
+  wrap.onpointerleave = () => { if(dragging) endPointer(); };
+  wrap.onmouseenter = stopAutoScroll;
+  wrap.onmouseleave = startAutoScroll;
+  wrap.onfocusin = stopAutoScroll;
+  wrap.onfocusout = startAutoScroll;
+  wrap.onwheel = event => {
     if(Math.abs(event.deltaY) > Math.abs(event.deltaX)){
       wrap.scrollLeft += event.deltaY;
       event.preventDefault();
     }
   };
-
-  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  let lastTime = 0;
-  const shouldPauseAutoScroll = () =>
-    reduceMotion || document.hidden || dragging ||
-    wrap.matches(':hover') || wrap.matches(':focus-within');
-
-  const autoScroll = (time) => {
-    if(shouldPauseAutoScroll()) {
-      wrap._categoryRaf = 0;
-      lastTime = 0;
-      return;
-    }
-    if(lastTime) wrap.scrollLeft += Math.min(time - lastTime, 50) * 0.024;
-    lastTime = time;
-    wrap._categoryRaf = requestAnimationFrame(autoScroll);
-  };
-  const startAutoScroll = () => {
-    if(!wrap._categoryRaf && !shouldPauseAutoScroll()) {
-      lastTime = 0;
-      wrap._categoryRaf = requestAnimationFrame(autoScroll);
-    }
-  };
-  const stopAutoScroll = () => {
-    if(wrap._categoryRaf) cancelAnimationFrame(wrap._categoryRaf);
-    wrap._categoryRaf = 0;
-    lastTime = 0;
-  };
-  wrap.onmouseenter = stopAutoScroll;
-  wrap.onmouseleave = startAutoScroll;
-  wrap.onfocusin = stopAutoScroll;
-  wrap.onfocusout = startAutoScroll;
   wrap._categoryVisibilityHandler = () => document.hidden ? stopAutoScroll() : startAutoScroll();
   document.addEventListener("visibilitychange", wrap._categoryVisibilityHandler);
-  const previousStopDragging = stopDragging;
-  wrap.onpointerdown = (event) => {
-    if(event.pointerType === "touch" || event.button !== 0) return;
-    dragging = true; moved = 0; wrap._categoryDragged = false;
-    startX = event.clientX; startScroll = wrap.scrollLeft;
-    stopAutoScroll();
-    wrap.setPointerCapture?.(event.pointerId);
-  };
-  wrap.onpointerup = () => { previousStopDragging(); startAutoScroll(); };
-  wrap.onpointercancel = () => { previousStopDragging(); startAutoScroll(); };
-  wrap.onpointerleave = () => { previousStopDragging(); startAutoScroll(); };
-  startAutoScroll();
-  if(typeof ResizeObserver !== 'undefined'){
+  if(typeof ResizeObserver !== "undefined"){
     wrap._categoryResizeObserver = new ResizeObserver(() => {
-      const oldCycle = cycleWidth;
+      const previous = cycleWidth;
       cycleWidth = track.scrollWidth / 3;
-      if(cycleWidth > 0 && (!oldCycle || Math.abs(cycleWidth-oldCycle)>2)) wrap.scrollLeft = cycleWidth;
+      if(cycleWidth > 0 && (!previous || Math.abs(cycleWidth - previous) > 2)) wrap.scrollLeft = cycleWidth;
     });
     wrap._categoryResizeObserver.observe(track);
   }
+  startAutoScroll();
 }
 /* ==========================================================
    UNIVERSAL TYPO-TOLERANT PRODUCT SEARCH
