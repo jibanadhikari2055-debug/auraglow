@@ -148,6 +148,72 @@ main{padding:16px;flex:1;}
   main{padding:12px;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
 }
+
+
+/* LOW-END FRIENDLY NEUMORPHIC ADMIN UI — CSS-only visual layer */
+:root{
+  --primary:#d98c8c;--primary-dark:#b96770;--secondary:#e5dfe3;--bg:#ebedf0;
+  --dark:#374151;--white:#ebedf0;--radius:14px;
+  --shadow:5px 5px 10px #d0d3d8,-5px -5px 10px #ffffff;
+  --transition:0.14s ease;
+}
+body{background:var(--bg);color:var(--dark);}
+.login-screen{background:var(--bg);}
+.login-box,.stat-card,.admin-product-card,.order-card,.modal-card{
+  background:var(--bg);border:1px solid rgba(255,255,255,.55);box-shadow:var(--shadow);
+}
+.topbar{background:var(--bg);box-shadow:0 3px 7px rgba(55,65,81,.07);border-bottom:1px solid rgba(255,255,255,.7);}
+.tabs{scrollbar-width:thin;}
+.tab-btn,.logout-btn,.btn-outline,.filter-bar button,.card-actions button,.order-actions button,.modal-close{
+  box-shadow:3px 3px 6px #d0d3d8,-3px -3px 6px #fff;
+}
+.tab-btn{background:var(--bg);border:1px solid transparent;color:#697180;}
+.tab-btn.active,.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:2px 2px 5px rgba(185,103,112,.18);}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn:active,.tab-btn:active,.logout-btn:active,.card-actions button:active,.order-actions button:active,.filter-bar button:active,.modal-close:active{transform:scale(.98);}
+.field input,.field select,.field textarea,.order-search,.status-select,.rich-editor{
+  background:var(--bg);color:var(--dark);border:1px solid #d9dce2;border-radius:9px;
+  box-shadow:inset 3px 3px 6px #d2d5da,inset -3px -3px 6px #fff;
+}
+.field input:focus,.field select:focus,.field textarea:focus,.order-search:focus,.status-select:focus,.rich-editor:focus{
+  border-color:var(--primary);outline:2px solid rgba(217,140,140,.15);outline-offset:1px;
+}
+.filter-bar{background:#e5dfe3;box-shadow:inset 2px 2px 5px rgba(150,130,140,.08);}
+.stat-card,.admin-product-card,.order-card{border-radius:14px;}
+.stat-card:hover,.admin-product-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.admin-product-card .img-wrap{background:#e7e8ec;}
+.badge.in{background:#e1f1e8;color:#247846;}.badge.out{background:#f7e4e5;color:#a8323a;}
+.edit-btn,.view-btn{background:#e8dfe3;color:var(--primary-dark);}
+.delete-btn{background:#f7e4e5;color:#a8323a;}
+.rich-toolbar{background:#e7e3e7;border-color:#d9dce2;}
+.rich-toolbar button{background:var(--bg);border-color:#d9dce2;box-shadow:2px 2px 4px #d0d3d8,-2px -2px 4px #fff;}
+.rich-editor{border-radius:0 0 9px 9px;}
+.modal-overlay{background:rgba(39,43,51,.48);}
+.modal-card{border-radius:16px;}
+#toast{box-shadow:0 4px 12px rgba(30,35,45,.15);}
+button:focus-visible,[role="button"]:focus-visible{outline:2px solid var(--primary-dark);outline-offset:3px;}
+/* Avoid large animation workloads when rendering many cards on slower phones. */
+.stat-card,.admin-product-card,.order-card{opacity:1;animation:none;will-change:auto;}
+.tab-panel.active{animation:none;}
+@media (hover:hover){.stat-card:hover,.admin-product-card:hover{transform:translateY(-2px);}}
+@media (max-width:600px){
+  .topbar{padding:10px 12px;}
+  .tabs{padding:10px 12px 0;gap:7px;}
+  .tab-btn{padding:8px 13px;}
+  .login-box{padding:26px 20px;}
+  .modal-overlay{padding:10px;}
+  .modal-card{padding:18px;max-height:94vh;}
+  .admin-product-grid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;}
+  .admin-product-card .body{padding:10px;}
+  .card-actions{gap:6px;}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+.security-card{height:auto;max-width:560px!important;margin:0 auto;}
+.security-card h3{text-align:left;}
+#passwordChangeMessage{margin:10px 0 0;}
+#passwordChangeMessage.success{display:block;color:var(--green);}
+#loginError{white-space:pre-line;}
+
 </style>
 </head>
 <body>
@@ -187,6 +253,7 @@ main{padding:16px;flex:1;}
     <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
     <button class="tab-btn" data-tab="products">Products</button>
     <button class="tab-btn" data-tab="orders">Orders</button>
+    <button class="tab-btn" data-tab="security">Security</button>
   </div>
 
   <main>
@@ -225,6 +292,33 @@ main{padding:16px;flex:1;}
       <input type="text" class="order-search" id="orderSearch" placeholder="Search by name or phone…">
       <div id="ordersList">
         <p class="loading-msg">Loading orders…</p>
+      </div>
+    </section>
+
+    <!-- SECURITY / CHANGE PASSWORD -->
+    <section class="tab-panel" id="tab-security">
+      <div class="section-header">
+        <h2>Security Settings</h2>
+      </div>
+      <div class="modal-card" style="display:block;max-width:620px;margin:0 auto;">
+        <h3>Change Admin Password</h3>
+        <p style="color:var(--muted);margin:8px 0 18px;">Use a strong password with at least 12 characters.</p>
+        <form id="changePasswordForm">
+          <div class="field">
+            <label for="currentAdminPassword">Current Password</label>
+            <input type="password" id="currentAdminPassword" autocomplete="current-password" required>
+          </div>
+          <div class="field">
+            <label for="newAdminPassword">New Password</label>
+            <input type="password" id="newAdminPassword" autocomplete="new-password" minlength="12" required>
+          </div>
+          <div class="field">
+            <label for="confirmAdminPassword">Confirm New Password</label>
+            <input type="password" id="confirmAdminPassword" autocomplete="new-password" minlength="12" required>
+          </div>
+          <p id="passwordChangeMessage" class="login-error" style="display:none;" aria-live="polite"></p>
+          <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
+        </form>
       </div>
     </section>
 
@@ -387,36 +481,80 @@ const appShell = document.getElementById("appShell");
 const loginError = document.getElementById("loginError");
 const loginBtn = document.getElementById("loginBtn");
 
+const LOGIN_LOCK_KEY_PREFIX = "aura_admin_login_guard_v1:";
+let loginCountdownTimer = null;
+function loginGuardKey(email){ return LOGIN_LOCK_KEY_PREFIX + "global"; }
+function readLoginGuard(email){
+  try { return JSON.parse(localStorage.getItem(loginGuardKey(email)) || '{"attempts":0,"lockedUntil":0}'); }
+  catch(_) { return {attempts:0,lockedUntil:0}; }
+}
+function writeLoginGuard(email, state){
+  try { localStorage.setItem(loginGuardKey(email), JSON.stringify(state)); } catch(_) {}
+}
+function showLoginLockState(email){
+  const state = readLoginGuard(email);
+  const remaining = Math.max(0, Math.ceil(((Number(state.lockedUntil)||0) - Date.now()) / 1000));
+  if (state.lockedUntil && state.lockedUntil > Date.now()) {
+    loginBtn.disabled = true;
+    document.getElementById("loginPassword").disabled = true;
+    loginError.style.display = "block";
+    loginError.textContent = `Too many incorrect attempts. Try again in ${Math.ceil((state.lockedUntil-Date.now())/1000)} seconds.`;
+    if(loginCountdownTimer) clearInterval(loginCountdownTimer);
+    loginCountdownTimer = setInterval(()=>{
+      const left = Math.max(0, Math.ceil((state.lockedUntil-Date.now())/1000));
+      if(left <= 0){ clearInterval(loginCountdownTimer); loginCountdownTimer=null; document.getElementById("loginPassword").disabled=false; loginBtn.disabled=false; loginError.textContent="You can try logging in again."; return; }
+      loginError.textContent = `Too many incorrect attempts. Try again in ${left} seconds.`;
+    }, 250);
+    return true;
+  }
+  document.getElementById("loginPassword").disabled = false;
+  return false;
+}
 document.getElementById("loginForm").addEventListener("submit", async function(e){
   e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  if(showLoginLockState(email)) return;
   loginError.style.display = "none";
   loginBtn.disabled = true;
   loginBtn.textContent = "Logging in…";
-
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value;
-
   try{
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
     if(error){
       console.error("[Aura Glow Admin] Login error:", error);
-      loginError.textContent = "Login failed: " + error.message;
-      loginError.style.display = "block";
+      const state = readLoginGuard(email);
+      if(/invalid login credentials|invalid.*credential|invalid password/i.test(error.message || "")){
+        state.attempts = (Number(state.attempts)||0) + 1;
+        if(state.attempts >= 3){ state.attempts = 0; state.lockedUntil = Date.now() + 30000; }
+        writeLoginGuard(email, state);
+        if(state.lockedUntil && state.lockedUntil > Date.now()) showLoginLockState(email);
+        else { loginError.textContent = `Incorrect email or password. ${3-state.attempts} attempt(s) remaining before a 30-second lock.`; loginError.style.display = "block"; }
+      }else{
+        loginError.textContent = "Login failed. Check your connection and account settings, then try again.";
+        loginError.style.display = "block";
+      }
       return;
     }
-
+    writeLoginGuard(email, {attempts:0,lockedUntil:0});
+    loginError.style.display = "none";
+    document.getElementById("loginPassword").value = "";
     showApp();
-
   }catch(err){
     console.error("[Aura Glow Admin] Unexpected login error:", err);
-    loginError.textContent = "Login failed: " + ((err && err.message) ? err.message : "Connection error. Please check your internet connection and try again.");
+    loginError.textContent = "Connection error. Please check your internet connection and try again.";
     loginError.style.display = "block";
-
   }finally{
-    loginBtn.disabled = false;
     loginBtn.textContent = "Log In";
+    const emailNow = document.getElementById("loginEmail").value.trim();
+    if(!readLoginGuard(emailNow).lockedUntil || readLoginGuard(emailNow).lockedUntil <= Date.now()) loginBtn.disabled = false;
   }
+});
+document.getElementById("loginEmail").addEventListener("input", ()=>{
+  if(loginCountdownTimer){ clearInterval(loginCountdownTimer); loginCountdownTimer=null; }
+  loginBtn.disabled = false;
+  document.getElementById("loginPassword").disabled = false;
+  loginError.style.display = "none";
+  showLoginLockState(document.getElementById("loginEmail").value.trim());
 });
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
@@ -438,6 +576,42 @@ function showApp(){
     showApp();
   }
 })();
+
+/* ---------- CHANGE ADMIN PASSWORD (Supabase Auth) ---------- */
+const changePasswordForm = document.getElementById("changePasswordForm");
+if(changePasswordForm) changePasswordForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const currentPassword = document.getElementById("currentAdminPassword").value;
+  const newPassword = document.getElementById("newAdminPassword").value;
+  const confirmPassword = document.getElementById("confirmAdminPassword").value;
+  const button = document.getElementById("changePasswordBtn");
+  const message = document.getElementById("passwordChangeMessage");
+  message.className = "login-error"; message.style.display = "none"; message.textContent = "";
+  if(newPassword.length < 12){ message.textContent = "New password must be at least 12 characters."; message.style.display="block"; return; }
+  if(newPassword !== confirmPassword){ message.textContent = "New passwords do not match."; message.style.display="block"; return; }
+  if(newPassword === currentPassword){ message.textContent = "Choose a password different from your current password."; message.style.display="block"; return; }
+  button.disabled = true; button.textContent = "Updating…";
+  try{
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+    if(userError || !userData?.user?.email) throw new Error("Your admin session is not valid. Log in again.");
+    const { error: verifyError } = await supabaseClient.auth.signInWithPassword({ email: userData.user.email, password: currentPassword });
+    if(verifyError) throw new Error("Current password is incorrect. Your password was not changed.");
+    const { error: updateError } = await supabaseClient.auth.updateUser({ password: newPassword });
+    if(updateError) throw updateError;
+    changePasswordForm.reset();
+    message.className = "login-error success";
+    message.textContent = "Password updated successfully. Use your new password next time you log in.";
+    message.style.display = "block";
+    showToast("Admin password updated successfully.", "success");
+  }catch(err){
+    console.error("[Aura Glow Admin] Password update error:", err);
+    message.className = "login-error";
+    message.textContent = err.message || "Could not update password. Please try again.";
+    message.style.display = "block";
+  }finally{
+    button.disabled = false; button.textContent = "Update Password";
+  }
+});
 
 /* ---------- TABS ---------- */
 function switchTab(tabName){
@@ -839,11 +1013,6 @@ function renderStats(){
 document.getElementById("clearProductFilterBtn").addEventListener("click", ()=>{
   productStockFilter = null;
   renderProducts();
-});
-document.getElementById("clearOrderFilterBtn").addEventListener("click", ()=>{
-  orderStatusFilter = null;
-  todayOrdersFilter = false;
-  renderOrders(document.getElementById("orderSearch").value);
 });
 document.getElementById("clearOrderFilterBtn").addEventListener("click", ()=>{
   orderStatusFilter = null;
